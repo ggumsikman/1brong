@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as fabric from 'fabric'
 import { removeBackground } from '@imgly/background-removal'
+import { jsPDF } from 'jspdf'
+import pptxgen from 'pptxgenjs'
 
 // ── 폰트 ──────────────────────────────────────────────────
 const FONTS = [
@@ -115,6 +117,16 @@ export default function Studio() {
 
   // 배경 탭
   const [bgTab, setBgTab] = useState<'solid'|'gradient'|'image'>('solid')
+
+  // 커스텀 폰트
+  const [customFonts, setCustomFonts] = useState<{label: string; value: string}[]>([])
+
+  // 다운로드 드롭다운
+  const [showDlMenu, setShowDlMenu] = useState(false)
+
+  // 커스텀 캔버스 크기
+  const [customW, setCustomW] = useState('')
+  const [customH, setCustomH] = useState('')
 
   // 요소 탭
   const [elemTab, setElemTab] = useState<'ilbirong'|'shape'>('ilbirong')
@@ -546,14 +558,53 @@ export default function Studio() {
   const bringFwd = () => { const c = canvasRef.current; const o = c?.getActiveObject(); if (c && o) { c.bringObjectForward(o); c.renderAll() } }
   const sendBwd = () => { const c = canvasRef.current; const o = c?.getActiveObject(); if (c && o) { c.sendObjectBackwards(o); c.renderAll() } }
 
-  // ── 다운로드 ─────────────────────────────────────────────
-  const download = () => {
-    const c = canvasRef.current; if (!c) return
-    c.discardActiveObject(); c.renderAll()
-    const url = c.toDataURL({ format: 'png', multiplier: 2 })
-    const a = document.createElement('a')
-    a.href = url; a.download = `1brong-${Date.now()}.png`; a.click()
+  // ── 폰트 업로드 ──────────────────────────────────────────
+  const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    const fontName = file.name.replace(/\.[^.]+$/, '')
+    const url = URL.createObjectURL(file)
+    const font = new FontFace(fontName, `url(${url})`)
+    await font.load()
+    document.fonts.add(font)
+    setCustomFonts(prev => [...prev, { label: fontName, value: fontName }])
+    e.target.value = ''
   }
+
+  // ── 다운로드 (형식별) ────────────────────────────────────
+  const getDataUrl = (format: 'png' | 'jpeg') => {
+    const c = canvasRef.current!
+    c.discardActiveObject(); c.renderAll()
+    return c.toDataURL({ format, multiplier: 2, ...(format === 'jpeg' ? { quality: 0.95 } : {}) })
+  }
+  const downloadAs = (ext: string, dataUrl: string) => {
+    const a = document.createElement('a')
+    a.href = dataUrl; a.download = `1brong-${Date.now()}.${ext}`; a.click()
+  }
+  const savePNG = () => { downloadAs('png', getDataUrl('png')); setShowDlMenu(false) }
+  const saveJPEG = () => { downloadAs('jpg', getDataUrl('jpeg')); setShowDlMenu(false) }
+  const savePDF = () => {
+    const c = canvasRef.current; if (!c) return
+    const dataUrl = getDataUrl('png')
+    const w = canvasPreset.w, h = canvasPreset.h
+    const pdf = new jsPDF({ orientation: w >= h ? 'landscape' : 'portrait', unit: 'px', format: [w, h] })
+    pdf.addImage(dataUrl, 'PNG', 0, 0, w, h)
+    pdf.save(`1brong-${Date.now()}.pdf`)
+    setShowDlMenu(false)
+  }
+  const savePPT = async () => {
+    const dataUrl = getDataUrl('png')
+    const w = canvasPreset.w, h = canvasPreset.h
+    const slideW = 10, slideH = (h / w) * 10
+    const prs = new pptxgen()
+    prs.defineLayout({ name: 'CUSTOM', width: slideW, height: slideH })
+    prs.layout = 'CUSTOM'
+    const slide = prs.addSlide()
+    slide.addImage({ data: dataUrl, x: 0, y: 0, w: slideW, h: slideH })
+    await prs.writeFile({ fileName: `1brong-${Date.now()}.pptx` })
+    setShowDlMenu(false)
+  }
+  // 기존 download 함수 (인쇄용)
+  const download = savePNG
 
   // ── 프린트 ───────────────────────────────────────────────
   const print = () => {
@@ -620,10 +671,28 @@ export default function Studio() {
             className="bg-white/20 text-white font-bold text-sm px-4 py-2 rounded-xl hover:bg-white/30 transition flex items-center gap-1.5">
             🖨 인쇄
           </button>
-          <button onClick={download}
-            className="bg-white/20 text-white font-bold text-sm px-4 py-2 rounded-xl hover:bg-white/30 transition flex items-center gap-1.5">
-            ⬇ 다운로드
-          </button>
+          <div className="relative">
+            <button onClick={() => setShowDlMenu(v => !v)}
+              className="bg-white/20 text-white font-bold text-sm px-4 py-2 rounded-xl hover:bg-white/30 transition flex items-center gap-1.5">
+              ⬇ 저장
+            </button>
+            {showDlMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 w-36"
+                onMouseLeave={() => setShowDlMenu(false)}>
+                {[
+                  { label: '🖼 PNG', action: savePNG },
+                  { label: '📷 JPEG', action: saveJPEG },
+                  { label: '📄 PDF', action: savePDF },
+                  { label: '📊 PPT', action: savePPT },
+                ].map(item => (
+                  <button key={item.label} onClick={item.action}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-500 transition">
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -658,7 +727,7 @@ export default function Studio() {
                 <select value={selFont}
                   onChange={e => { setSelFont(e.target.value); updateText({ fontFamily: e.target.value }) }}
                   className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs mb-2 focus:outline-none focus:ring-2 focus:ring-pink-300">
-                  {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                  {[...FONTS, ...customFonts].map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
                 {/* 크기 */}
                 <label className="text-xs text-gray-500 block mb-1">크기 {selSize}px</label>
@@ -695,7 +764,7 @@ export default function Studio() {
             {activePanel === '텍스트' && (
               <div className="p-4 overflow-y-auto flex-1">
                 <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">텍스트 추가</p>
-                <div className="space-y-2">
+                <div className="space-y-2 mb-5">
                   {TEXT_PRESETS.map(p => (
                     <button key={p.label} onClick={() => addText(p.sample, p.size, p.weight, p.color)}
                       className="w-full text-left px-4 py-3 rounded-xl border border-gray-100 hover:border-pink-200 hover:bg-pink-50 transition group">
@@ -705,6 +774,26 @@ export default function Studio() {
                       </span>
                     </button>
                   ))}
+                </div>
+                {/* 폰트 업로드 */}
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">폰트 업로드</p>
+                  <label className="w-full border-2 border-dashed border-purple-200 rounded-xl py-3 text-purple-400 text-xs text-center cursor-pointer hover:bg-purple-50 transition flex flex-col items-center gap-1">
+                    <span className="text-lg">🔤</span>
+                    <span className="font-medium">폰트 파일 추가</span>
+                    <span className="text-gray-400" style={{ fontSize: 10 }}>.ttf / .otf / .woff / .woff2</span>
+                    <input type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={handleFontUpload} />
+                  </label>
+                  {customFonts.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {customFonts.map(f => (
+                        <div key={f.value} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-purple-50 text-xs">
+                          <span style={{ fontFamily: f.value }} className="text-gray-700 truncate">{f.label}</span>
+                          <span className="text-purple-400 ml-1 shrink-0">추가됨</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -877,6 +966,29 @@ export default function Studio() {
                       </div>
                     </button>
                   ))}
+                </div>
+                {/* 직접 입력 */}
+                <div className="border-t border-gray-100 mt-4 pt-4">
+                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">직접 입력 (px)</p>
+                  <div className="flex gap-2 items-center">
+                    <input type="number" placeholder="가로" min={100} max={4000} value={customW}
+                      onChange={e => setCustomW(e.target.value)}
+                      className="flex-1 border border-gray-200 rounded-lg px-2.5 py-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                    <span className="text-gray-400 text-xs">×</span>
+                    <input type="number" placeholder="세로" min={100} max={4000} value={customH}
+                      onChange={e => setCustomH(e.target.value)}
+                      className="flex-1 border border-gray-200 rounded-lg px-2.5 py-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                  </div>
+                  <button
+                    onClick={() => {
+                      const w = Math.max(100, Math.min(4000, parseInt(customW) || 600))
+                      const h = Math.max(100, Math.min(4000, parseInt(customH) || 600))
+                      setCanvasPreset({ label: `${w}×${h}`, icon: '📐', w, h })
+                    }}
+                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold text-white transition"
+                    style={{ background: 'linear-gradient(135deg,#FF6B9D,#C77DFF)' }}>
+                    적용
+                  </button>
                 </div>
               </div>
             )}

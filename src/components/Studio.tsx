@@ -20,16 +20,33 @@ const TEXT_PRESETS = [
   { label: '작은 글씨', size: 20, weight: 'normal', color: '#888888', sample: '작은 글씨' },
 ]
 
-// ── SVG 스티커 ────────────────────────────────────────────
-const STICKERS = [
-  { label: '하트', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 85 L15 50 C5 38 10 18 25 18 C35 18 45 26 50 35 C55 26 65 18 75 18 C90 18 95 38 85 50 Z" fill="#FF6B9D"/></svg>` },
-  { label: '별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,35 95,35 71,57 80,90 50,70 20,90 29,57 5,35 37,35" fill="#FFD166"/></svg>` },
-  { label: '구름', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><ellipse cx="60" cy="55" rx="45" ry="22" fill="#E8F4FD" stroke="#BDE0F5" stroke-width="2"/><circle cx="35" cy="45" r="20" fill="#E8F4FD" stroke="#BDE0F5" stroke-width="2"/><circle cx="60" cy="35" r="25" fill="#E8F4FD" stroke="#BDE0F5" stroke-width="2"/><circle cx="85" cy="45" r="18" fill="#E8F4FD" stroke="#BDE0F5" stroke-width="2"/></svg>` },
-  { label: '태양', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#FFD166"/><line x1="50" y1="6" x2="50" y2="22" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="78" x2="50" y2="94" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="6" y1="50" x2="22" y2="50" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="78" y1="50" x2="94" y2="50" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="18" y1="18" x2="29" y2="29" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="71" y1="71" x2="82" y2="82" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="82" y1="18" x2="71" y2="29" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="18" y1="82" x2="29" y2="71" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/></svg>` },
-  { label: '꽃', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6"/><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6" transform="rotate(72,50,50)"/><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6" transform="rotate(144,50,50)"/><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6" transform="rotate(216,50,50)"/><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6" transform="rotate(288,50,50)"/><circle cx="50" cy="50" r="14" fill="#FFE066"/></svg>` },
-  { label: '무지개', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><path d="M5 55 Q5 5 50 5 Q95 5 95 55" fill="none" stroke="#FF6B6B" stroke-width="6" stroke-linecap="round"/><path d="M13 55 Q13 15 50 15 Q87 15 87 55" fill="none" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><path d="M21 55 Q21 25 50 25 Q79 25 79 55" fill="none" stroke="#7BC67E" stroke-width="6" stroke-linecap="round"/><path d="M29 55 Q29 33 50 33 Q71 33 71 55" fill="none" stroke="#74B9FF" stroke-width="6" stroke-linecap="round"/></svg>` },
-  { label: '리본', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><path d="M60 40 L20 10 C10 5 5 20 15 28 L55 42 Z" fill="#FF6B9D"/><path d="M60 40 L100 10 C110 5 115 20 105 28 L65 42 Z" fill="#FF6B9D"/><path d="M60 40 L20 70 C10 75 5 60 15 52 L55 38 Z" fill="#FF8FA3"/><path d="M60 40 L100 70 C110 75 115 60 105 52 L65 38 Z" fill="#FF8FA3"/><circle cx="60" cy="40" r="10" fill="#FF4081"/></svg>` },
-  { label: '반짝', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 54,42 86,38 58,52 80,76 50,58 20,76 42,52 14,38 46,42" fill="#FFD166"/></svg>` },
+// ── 일비롱 손그림 PNG 목록 ────────────────────────────────
+const ILBIRONG_STICKERS = [
+  '가랜드','가방','개나리','검','고깔모자','고깔모자2','곰','구름',
+  '꽃1','꽃2','꽃3','꽃4','꽃스마일','꿀벌',
+  '나무','나무2','나뭇가지','나뭇잎','나비2',
+  '남아오티합성','남자입학1','남자입학3','남학생',
+  '노란꽃','노란꽃4','노란풍선','노랑나비','노랑튤립','노트',
+  '데이지','리본','리본2','무무개','무지개','민트별',
+  '벌','벚꽃','벚꽃2','벚꽃잎','벚꽃잎3',
+  '별','별1','별2','별3','병아리','보라별','보라튤립','분홍별',
+  '새싹','스마일','스마일2','슾',
+  '언덕','언덕1','언덕2',
+  '여자입학1','여학생','연보라 나비','연필',
+  '오티여아합성','요','유치원','유치원버스','은계','을',
+  '음표','음표2','음표3','입',
+  '입학남아','입학남자 합성','입학남자아이','입학모자','입학여어','입학여자아이',
+  '잎','잎1','잎2','잎3','자','전구',
+  '책','책2','책4','책펼친것 흰색','축','칠판','칠판2',
+  '컴페니 4','컴페니1','컴페니2','컴페니3','큰구름','클립1','클립2','클립3',
+  '토끼','툴립2','튤ㄹ힙','튤립1','튤립22','튤립3',
+  '풍선 3','풍선2','풍선끈',
+  '하','하느2','하얀꽃ㄹ','하트','학','학교','해 (2)','해','화분',
+]
+const STICKER_BASE = '/1brong/stickers'
+
+// ── SVG 도형 ──────────────────────────────────────────────
+const SHAPES = [
   { label: '사각형', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="5" y="5" width="90" height="90" rx="12" fill="#FF6B6B"/></svg>` },
   { label: '원', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#74B9FF"/></svg>` },
   { label: '다이아', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="#FFD166"/></svg>` },
@@ -263,6 +280,18 @@ export default function Studio() {
     group.scaleToWidth(140)
     canvas.add(group)
     canvas.setActiveObject(group)
+    canvas.renderAll()
+  }
+
+  // ── 일비롱 손그림 PNG 추가 ────────────────────────────────
+  const addIlbirong = async (name: string) => {
+    const canvas = canvasRef.current; if (!canvas) return
+    const url = `${STICKER_BASE}/${encodeURIComponent(name)}.png`
+    const img = await fabric.FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
+    img.scaleToWidth(160)
+    img.set({ left: canvasPreset.w / 2, top: canvasPreset.h / 2, originX: 'center', originY: 'center' })
+    canvas.add(img)
+    canvas.setActiveObject(img)
     canvas.renderAll()
   }
 
@@ -526,20 +555,34 @@ export default function Studio() {
             {/* ── 요소 패널 ── */}
             {activePanel === '요소' && (
               <div className="p-4">
-                <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">스티커 & 도형</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {STICKERS.map(s => (
+                {/* 일비롱 손그림 */}
+                <p className="text-xs font-bold text-pink-400 mb-2 uppercase tracking-wide">일비롱 손그림</p>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {ILBIRONG_STICKERS.map(name => (
+                    <button key={name} onClick={() => addIlbirong(name)}
+                      className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-1.5 bg-gray-50 hover:bg-pink-50">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`${STICKER_BASE}/${encodeURIComponent(name)}.png`} alt={name}
+                        className="w-9 h-9 object-contain" loading="lazy" />
+                      <span className="text-gray-400 leading-tight text-center w-full truncate px-0.5" style={{ fontSize: 9 }}>{name}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* 도형 */}
+                <p className="text-xs font-bold text-purple-400 mb-2 uppercase tracking-wide">도형</p>
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  {SHAPES.map(s => (
                     <button key={s.label} onClick={() => addSticker(s.svg)}
-                      className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-pink-50">
-                      <div className="w-10 h-10 flex items-center justify-center"
+                      className="aspect-square rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-purple-50">
+                      <div className="w-8 h-8 flex items-center justify-center"
                         dangerouslySetInnerHTML={{ __html: s.svg }} />
-                      <span className="text-gray-400" style={{ fontSize: 10 }}>{s.label}</span>
+                      <span className="text-gray-400" style={{ fontSize: 9 }}>{s.label}</span>
                     </button>
                   ))}
                 </div>
                 {/* 이미지 선택 시 레이어/삭제 */}
                 {selected && !isText && (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="mt-2 pt-4 border-t border-gray-100">
                     <p className="text-xs font-bold text-gray-400 mb-2">요소 편집</p>
                     <div className="flex gap-1.5">
                       <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↓ 뒤로</button>

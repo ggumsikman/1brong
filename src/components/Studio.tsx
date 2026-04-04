@@ -335,6 +335,22 @@ export default function Studio() {
     a.href = url; a.download = `1brong-${Date.now()}.png`; a.click()
   }
 
+  // ── 프린트 ───────────────────────────────────────────────
+  const print = () => {
+    const c = canvasRef.current; if (!c) return
+    c.discardActiveObject(); c.renderAll()
+    const url = c.toDataURL({ format: 'png', multiplier: 2 })
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(`<!DOCTYPE html><html><head><title>1B롱 인쇄</title><style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: white; }
+      img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+      @media print { body { min-height: unset; } img { width: 100%; } }
+    </style></head><body><img src="${url}" onload="window.print(); window.close();" /></body></html>`)
+    w.document.close()
+  }
+
   // ── 패널 토글 ─────────────────────────────────────────────
   const togglePanel = (id: PanelType) => {
     setActivePanel(p => p === id ? null : id)
@@ -355,6 +371,10 @@ export default function Studio() {
         </div>
         <div className="flex items-center gap-2">
           {/* 실행 취소/재실행은 추후 추가 */}
+          <button onClick={print}
+            className="bg-white/20 text-white font-bold text-sm px-4 py-2 rounded-xl hover:bg-white/30 transition flex items-center gap-1.5">
+            <span>🖨</span> 인쇄
+          </button>
           <button onClick={download}
             className="bg-white text-pink-600 font-bold text-sm px-5 py-2 rounded-xl shadow-sm hover:shadow-md transition flex items-center gap-1.5">
             <span>⬇</span> 다운로드

@@ -156,7 +156,10 @@ export default function Studio() {
   const [customH, setCustomH] = useState('')
 
   // 요소 탭
-  const [elemTab, setElemTab] = useState<'ilbirong'|'shape'>('ilbirong')
+  const [elemTab, setElemTab] = useState<'ilbirong'|'shape'|'table'>('ilbirong')
+
+  // 표: 격자 선택 hover
+  const [tableHover, setTableHover] = useState<{r:number;c:number}|null>(null)
 
   // 클립보드 (내부 복사/붙여넣기)
   const clipboardRef = useRef<fabric.FabricObject | null>(null)
@@ -401,6 +404,33 @@ export default function Studio() {
     if (!obj || obj.type !== 'textbox') return
     obj.set(props as never)
     canvas?.renderAll()
+  }
+
+  // ── 표 추가 ──────────────────────────────────────────────
+  const addTable = (rows: number, cols: number, headerColor = '#FFE0EF', lineColor = '#bbb') => {
+    const canvas = canvasRef.current; if (!canvas) return
+    const cellW = 90, cellH = 36
+    const tableW = cols * cellW, tableH = rows * cellH
+    const objs: fabric.FabricObject[] = []
+    // 헤더 행 배경
+    objs.push(new fabric.Rect({ left: 0, top: 0, width: tableW, height: cellH, fill: headerColor, strokeWidth: 0 }))
+    // 나머지 행 배경
+    for (let r = 1; r < rows; r++) {
+      objs.push(new fabric.Rect({ left: 0, top: r * cellH, width: tableW, height: cellH, fill: '#ffffff', strokeWidth: 0 }))
+    }
+    // 가로선
+    for (let r = 0; r <= rows; r++) {
+      objs.push(new fabric.Line([0, r * cellH, tableW, r * cellH], { stroke: lineColor, strokeWidth: 1 }))
+    }
+    // 세로선
+    for (let c = 0; c <= cols; c++) {
+      objs.push(new fabric.Line([c * cellW, 0, c * cellW, tableH], { stroke: lineColor, strokeWidth: 1 }))
+    }
+    const group = new fabric.Group(objs, {
+      left: canvasPreset.w / 2, top: canvasPreset.h / 2,
+      originX: 'center', originY: 'center',
+    })
+    canvas.add(group); canvas.setActiveObject(group); canvas.renderAll()
   }
 
   // ── 스티커(SVG) 추가 ──────────────────────────────────────
@@ -845,7 +875,7 @@ export default function Studio() {
               <div className="flex flex-col h-full">
                 {/* 탭 */}
                 <div className="flex gap-1 p-3 pb-0 shrink-0">
-                  {([['ilbirong', '일비롱 손그림'], ['shape', '도형']] as const).map(([key, label]) => (
+                  {([['ilbirong', '손그림'], ['shape', '도형'], ['table', '표']] as const).map(([key, label]) => (
                     <button key={key} onClick={() => setElemTab(key)}
                       className="flex-1 py-2 rounded-lg text-xs font-bold transition"
                       style={elemTab === key
@@ -880,6 +910,54 @@ export default function Studio() {
                           <span className="text-gray-400" style={{ fontSize: 9 }}>{s.label}</span>
                         </button>
                       ))}
+                    </div>
+                  )}
+                  {elemTab === 'table' && (
+                    <div>
+                      {/* 격자 선택기 */}
+                      <p className="text-xs text-gray-400 mb-2 font-medium">크기 선택 (행 × 열)</p>
+                      <div className="inline-grid gap-1 mb-1" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}
+                        onMouseLeave={() => setTableHover(null)}>
+                        {Array.from({ length: 6 }, (_, r) =>
+                          Array.from({ length: 6 }, (_, c) => (
+                            <div key={`${r}-${c}`}
+                              onMouseEnter={() => setTableHover({ r: r + 1, c: c + 1 })}
+                              onClick={() => { addTable(r + 1, c + 1); setTableHover(null) }}
+                              className="w-7 h-7 rounded border cursor-pointer transition"
+                              style={{
+                                borderColor: tableHover && r < tableHover.r && c < tableHover.c ? '#FF6B9D' : '#e5e7eb',
+                                background: tableHover && r < tableHover.r && c < tableHover.c ? '#FFE0EF' : '#f9fafb',
+                              }} />
+                          ))
+                        )}
+                      </div>
+                      <p className="text-xs text-pink-400 h-5 mb-4 font-medium">
+                        {tableHover ? `${tableHover.r} × ${tableHover.c}` : ''}
+                      </p>
+                      {/* 프리셋 */}
+                      <p className="text-xs text-gray-400 mb-2 font-medium">템플릿</p>
+                      <div className="space-y-2">
+                        <button onClick={() => addTable(6, 6, '#FFE0EF', '#dda')}
+                          className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:border-pink-200 hover:bg-pink-50 transition">
+                          <span className="text-xs font-bold text-gray-600">📅 시간표</span>
+                          <span className="text-gray-400 block" style={{ fontSize: 10 }}>6행 × 6열 · 핑크 헤더</span>
+                        </button>
+                        <button onClick={() => addTable(6, 6, '#E8F5E9', '#aaa')}
+                          className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:border-green-200 hover:bg-green-50 transition">
+                          <span className="text-xs font-bold text-gray-600">⭐ 칭찬 스티커판</span>
+                          <span className="text-gray-400 block" style={{ fontSize: 10 }}>6행 × 6열 · 민트 헤더</span>
+                        </button>
+                        <button onClick={() => addTable(3, 4, '#E3F2FD', '#99b')}
+                          className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition">
+                          <span className="text-xs font-bold text-gray-600">🏷 이름표</span>
+                          <span className="text-gray-400 block" style={{ fontSize: 10 }}>3행 × 4열 · 하늘색 헤더</span>
+                        </button>
+                        <button onClick={() => addTable(5, 3, '#F3E5F5', '#b9b')}
+                          className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition">
+                          <span className="text-xs font-bold text-gray-600">📋 출석부</span>
+                          <span className="text-gray-400 block" style={{ fontSize: 10 }}>5행 × 3열 · 보라 헤더</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

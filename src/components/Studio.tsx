@@ -78,16 +78,17 @@ const CANVAS_PRESETS = [
   { label: '현수막', icon: '━', w: 1200, h: 400 },
   { label: '명찰', icon: '🏷', w: 400, h: 560 },
   { label: '머그컵', icon: '☕', w: 600, h: 440 },
+  { label: '티셔츠', icon: '👕', w: 500, h: 600 },
 ]
 
 // ── 사이드바 메뉴 ─────────────────────────────────────────
-type PanelType = '텍스트' | '요소' | '배경' | '사진' | '크기'
+type PanelType = '텍스트' | '요소' | '배경' | '사진' | '캔버스'
 const SIDEBAR_MENUS: { id: PanelType; icon: string; label: string }[] = [
   { id: '텍스트', icon: 'T', label: '텍스트' },
   { id: '요소', icon: '★', label: '요소' },
   { id: '배경', icon: '🎨', label: '배경' },
   { id: '사진', icon: '🖼', label: '사진' },
-  { id: '크기', icon: '⊞', label: '크기' },
+  { id: '캔버스', icon: '⊞', label: '캔버스' },
 ]
 
 export default function Studio() {
@@ -97,7 +98,7 @@ export default function Studio() {
   const bgFileRef = useRef<HTMLInputElement>(null)
   const photoFileRef = useRef<HTMLInputElement>(null)
 
-  const [activePanel, setActivePanel] = useState<PanelType | null>('텍스트')
+  const [activePanel, setActivePanel] = useState<PanelType | null>('캔버스')
   const [canvasPreset, setCanvasPreset] = useState(CANVAS_PRESETS[0])
   const [scale, setScale] = useState(1)
 
@@ -685,10 +686,10 @@ export default function Studio() {
               </div>
             )}
 
-            {/* ── 크기 패널 ── */}
-            {activePanel === '크기' && (
+            {/* ── 캔버스 패널 ── */}
+            {activePanel === '캔버스' && (
               <div className="p-4 overflow-y-auto flex-1">
-                <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">캔버스 크기</p>
+                <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">캔버스 크기 선택</p>
                 <div className="space-y-1.5">
                   {CANVAS_PRESETS.map(p => (
                     <button key={p.label} onClick={() => setCanvasPreset(p)}

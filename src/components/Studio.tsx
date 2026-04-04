@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as fabric from 'fabric'
+import { removeBackground } from '@imgly/background-removal'
 
 // ── 폰트 ──────────────────────────────────────────────────
 const FONTS = [
@@ -398,6 +399,40 @@ export default function Studio() {
     e.target.value = ''
   }
 
+  // ── 배경 제거 ─────────────────────────────────────────────
+  const [removingBg, setRemovingBg] = useState(false)
+  const removeBg = async () => {
+    const c = canvasRef.current; if (!c) return
+    const obj = c.getActiveObject()
+    if (!obj || obj.type !== 'image') return
+    const fabricImg = obj as fabric.FabricImage
+    const imgEl = fabricImg.getElement() as HTMLImageElement
+    try {
+      setRemovingBg(true)
+      const res = await fetch(imgEl.src)
+      const blob = await res.blob()
+      const resultBlob = await removeBackground(blob)
+      const url = URL.createObjectURL(resultBlob)
+      const newImg = await fabric.FabricImage.fromURL(url)
+      newImg.set({
+        left: fabricImg.left, top: fabricImg.top,
+        scaleX: fabricImg.scaleX, scaleY: fabricImg.scaleY,
+        angle: fabricImg.angle,
+        originX: fabricImg.originX, originY: fabricImg.originY,
+      })
+      c.remove(fabricImg)
+      c.add(newImg)
+      c.setActiveObject(newImg)
+      c.renderAll()
+      setSelected(newImg)
+    } catch (err) {
+      console.error('배경 제거 실패', err)
+      alert('배경 제거에 실패했습니다.')
+    } finally {
+      setRemovingBg(false)
+    }
+  }
+
   // ── 삭제 ─────────────────────────────────────────────────
   const deleteSelected = () => {
     const c = canvasRef.current; if (!c) return
@@ -674,7 +709,25 @@ export default function Studio() {
                       onChange={e => addPhoto(e, true)} />
                   </label>
                 </div>
-                {selected && !isText && (
+                {selected && selected.type === 'image' && (
+                  <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
+                    <button onClick={removeBg} disabled={removingBg}
+                      className="w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ background: removingBg ? '#eee' : 'linear-gradient(135deg,#FF6B9D,#C77DFF)', color: removingBg ? '#999' : 'white' }}>
+                      {removingBg ? (
+                        <><span className="animate-spin">⏳</span> 배경 제거 중...</>
+                      ) : (
+                        <><span>✂️</span> 배경 제거 (AI)</>
+                      )}
+                    </button>
+                    <div className="flex gap-1.5">
+                      <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↓ 뒤로</button>
+                      <button onClick={bringFwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↑ 앞으로</button>
+                      <button onClick={deleteSelected} className="flex-1 border border-red-200 text-red-400 text-xs py-1.5 rounded-lg hover:bg-red-50">🗑</button>
+                    </div>
+                  </div>
+                )}
+                {selected && selected.type !== 'image' && !isText && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <div className="flex gap-1.5">
                       <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↓ 뒤로</button>

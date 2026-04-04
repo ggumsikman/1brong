@@ -606,12 +606,14 @@ export default function Studio() {
         <div className="flex items-center gap-2">
           {/* Undo / Redo */}
           <button onClick={undo} disabled={!canUndo} title="실행 취소 (Ctrl+Z)"
-            className="bg-white/20 text-white font-bold text-sm px-3 py-2 rounded-xl hover:bg-white/30 transition disabled:opacity-30 disabled:cursor-not-allowed">
-            ↩
+            className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-white/30 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M3 13C5.5 6.5 15 4 21 10"/></svg>
+            되돌리기
           </button>
           <button onClick={redo} disabled={!canRedo} title="다시 실행 (Ctrl+Y)"
-            className="bg-white/20 text-white font-bold text-sm px-3 py-2 rounded-xl hover:bg-white/30 transition disabled:opacity-30 disabled:cursor-not-allowed">
-            ↪
+            className="bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-white/30 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M21 13C18.5 6.5 9 4 3 10"/></svg>
+            다시실행
           </button>
           <div className="w-px h-5 bg-white/30" />
           <button onClick={print}

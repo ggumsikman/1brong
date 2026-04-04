@@ -217,29 +217,54 @@ export default function Studio() {
   }
 
   // ── 사진 추가 ─────────────────────────────────────────────
-  const addPhoto = async (e: React.ChangeEvent<HTMLInputElement>, circle = false) => {
+  const addPhoto = async (e: React.ChangeEvent<HTMLInputElement>, circleMode = false) => {
     const file = e.target.files?.[0]; if (!file) return
     const url = URL.createObjectURL(file)
     const canvas = canvasRef.current; if (!canvas) return
-    const img = await fabric.FabricImage.fromURL(url)
 
-    if (circle) {
-      // 짧은 변 기준으로 scale → 원 지름 = 짧은 변 → 잘림 최소화
+    if (circleMode) {
+      // HTMLImageElement로 직접 로드 → Pattern fill로 Circle 생성
+      // → bounding box = 원 크기 (clipPath 방식의 bounding box 오버플로 문제 해결)
+      const imgEl = new Image()
+      await new Promise<void>((resolve) => { imgEl.onload = () => resolve(); imgEl.src = url })
+
       const targetSize = Math.min(canvasPreset.w, canvasPreset.h) * 0.42
-      const naturalW = img.width ?? 100
-      const naturalH = img.height ?? 100
-      if (naturalW <= naturalH) {
-        img.scaleToWidth(targetSize)    // 세로형: width 기준
-      } else {
-        img.scaleToHeight(targetSize)   // 가로형: height 기준
-      }
-      const r = Math.min(img.getScaledWidth(), img.getScaledHeight()) / 2
-      img.clipPath = new fabric.Circle({ radius: r, originX: 'center', originY: 'center' })
-    } else {
-      const maxW = canvasPreset.w * 0.5
-      if ((img.width ?? 0) > maxW) img.scaleToWidth(maxW)
+      const r = targetSize / 2
+      const nw = imgEl.naturalWidth || 1
+      const nh = imgEl.naturalHeight || 1
+
+      // cover 스케일: 짧은 변이 targetSize를 채우도록
+      const scale = Math.max(targetSize / nw, targetSize / nh)
+      const sw = nw * scale
+      const sh = nh * scale
+      const ox = -(sw - targetSize) / 2
+      const oy = -(sh - targetSize) / 2
+
+      const pattern = new fabric.Pattern({
+        source: imgEl,
+        repeat: 'no-repeat',
+        patternTransform: [scale, 0, 0, scale, ox, oy] as never,
+      })
+
+      const circ = new fabric.Circle({
+        radius: r,
+        fill: pattern as never,
+        left: canvasPreset.w / 2,
+        top: canvasPreset.h / 2,
+        originX: 'center',
+        originY: 'center',
+      })
+      canvas.add(circ)
+      canvas.setActiveObject(circ)
+      canvas.renderAll()
+      e.target.value = ''
+      return
     }
 
+    // 일반 사각형 사진
+    const img = await fabric.FabricImage.fromURL(url)
+    const maxW = canvasPreset.w * 0.5
+    if ((img.width ?? 0) > maxW) img.scaleToWidth(maxW)
     img.set({ left: canvasPreset.w / 2, top: canvasPreset.h / 2, originX: 'center', originY: 'center' })
     canvas.add(img)
     canvas.setActiveObject(img)
@@ -271,7 +296,20 @@ export default function Studio() {
     const c = canvasRef.current; if (!c) return
     const url = URL.createObjectURL(file)
     const img = await fabric.FabricImage.fromURL(url)
-    img.scaleToWidth(canvasPreset.w)
+    // 캔버스 전체를 cover로 채우기 (비율 유지, 잘림 최소화)
+    const scaleX = canvasPreset.w / (img.width ?? 1)
+    const scaleY = canvasPreset.h / (img.height ?? 1)
+    const scale = Math.max(scaleX, scaleY)
+    const sw = (img.width ?? 1) * scale
+    const sh = (img.height ?? 1) * scale
+    img.set({
+      scaleX: scale,
+      scaleY: scale,
+      left: (canvasPreset.w - sw) / 2,
+      top: (canvasPreset.h - sh) / 2,
+      originX: 'left',
+      originY: 'top',
+    })
     c.backgroundImage = img
     c.renderAll()
     e.target.value = ''

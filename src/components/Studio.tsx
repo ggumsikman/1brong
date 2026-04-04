@@ -296,7 +296,13 @@ export default function Studio() {
       const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement
       if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
         const obj = canvas.getActiveObject()
-        if (obj) { canvas.remove(obj); canvas.renderAll(); setSelected(null) }
+        if (obj) {
+          if (obj.type === 'activeselection') {
+            (obj as fabric.ActiveSelection).forEachObject(o => canvas.remove(o))
+            canvas.discardActiveObject()
+          } else { canvas.remove(obj) }
+          canvas.renderAll(); setSelected(null)
+        }
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo() }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo() }
@@ -577,11 +583,17 @@ export default function Studio() {
     canvas.add(img); canvas.setActiveObject(img); canvas.renderAll()
   }
 
-  // ── 삭제 ─────────────────────────────────────────────────
+  // ── 삭제 (다중 선택 포함) ──────────────────────────────────
   const deleteSelected = () => {
     const c = canvasRef.current; if (!c) return
     const obj = c.getActiveObject(); if (!obj) return
-    c.remove(obj); c.renderAll(); setSelected(null)
+    if (obj.type === 'activeselection') {
+      (obj as fabric.ActiveSelection).forEachObject(o => c.remove(o))
+      c.discardActiveObject()
+    } else {
+      c.remove(obj)
+    }
+    c.renderAll(); setSelected(null)
   }
 
   // ── 레이어 순서 ───────────────────────────────────────────

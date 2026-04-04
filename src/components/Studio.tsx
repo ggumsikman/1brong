@@ -119,6 +119,9 @@ export default function Studio() {
   // 요소 탭
   const [elemTab, setElemTab] = useState<'ilbirong'|'shape'>('ilbirong')
 
+  // 클립보드 (내부 복사/붙여넣기)
+  const clipboardRef = useRef<fabric.FabricObject | null>(null)
+
   // 히스토리 (Undo/Redo)
   const historyRef = useRef<string[]>([])
   const historyIdxRef = useRef(-1)
@@ -199,7 +202,7 @@ export default function Studio() {
     historyIdxRef.current = -1
     saveHistory()
 
-    // 키보드 Delete + Ctrl+Z/Y
+    // 키보드 Delete + Ctrl+Z/Y/C
     const onKey = (e: KeyboardEvent) => {
       const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement
       if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
@@ -208,14 +211,46 @@ export default function Studio() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo() }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo() }
+      // 내부 복사
+      if (!isInput && (e.ctrlKey || e.metaKey) && e.key === 'c') {
+        const obj = canvas.getActiveObject()
+        if (obj) obj.clone().then((cloned: fabric.FabricObject) => { clipboardRef.current = cloned })
+      }
     }
     window.addEventListener('keydown', onKey)
+
+    // 붙여넣기: 외부 이미지 or 내부 복사 오브젝트
+    const onPaste = async (e: ClipboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement
+      if (isInput) return
+      const items = Array.from(e.clipboardData?.items ?? [])
+      const imageItem = items.find(item => item.type.startsWith('image/'))
+      if (imageItem) {
+        // 외부 클립보드 이미지 붙여넣기
+        const blob = imageItem.getAsFile(); if (!blob) return
+        const url = URL.createObjectURL(blob)
+        const img = await fabric.FabricImage.fromURL(url)
+        const maxW = canvasPreset.w * 0.5
+        if ((img.width ?? 0) > maxW) img.scaleToWidth(maxW)
+        img.set({ left: canvasPreset.w / 2, top: canvasPreset.h / 2, originX: 'center', originY: 'center' })
+        canvas.add(img); canvas.setActiveObject(img); canvas.renderAll()
+      } else if (clipboardRef.current) {
+        // 내부 오브젝트 붙여넣기 (20px 오프셋)
+        const cloned = await clipboardRef.current.clone()
+        cloned.set({ left: (cloned.left ?? 0) + 20, top: (cloned.top ?? 0) + 20 })
+        canvas.add(cloned); canvas.setActiveObject(cloned); canvas.renderAll()
+        clipboardRef.current = await cloned.clone()  // 다음 붙여넣기 위해 갱신
+      }
+    }
+    document.addEventListener('paste', onPaste)
+
     recalcScale()
     window.addEventListener('resize', recalcScale)
 
     return () => {
       canvas.dispose()
       window.removeEventListener('keydown', onKey)
+      document.removeEventListener('paste', onPaste)
       window.removeEventListener('resize', recalcScale)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

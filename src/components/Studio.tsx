@@ -438,7 +438,7 @@ export default function Studio() {
   const isText = selected?.type === 'textbox'
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#FFF8F0', fontFamily: 'Noto Sans KR, sans-serif' }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#FFF8F0', fontFamily: 'Noto Sans KR, sans-serif' }}>
       {/* ══ 헤더 ════════════════════════════════════════════ */}
       <header style={{ background: 'linear-gradient(135deg, #FF6B9D, #C77DFF)', boxShadow: '0 2px 12px rgba(199,125,255,0.3)' }}
         className="px-5 py-3 flex items-center justify-between sticky top-0 z-30">

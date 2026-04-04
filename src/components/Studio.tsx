@@ -22,18 +22,18 @@ const TEXT_PRESETS = [
 
 // ── SVG 스티커 ────────────────────────────────────────────
 const STICKERS = [
-  { emoji: '❤️', label: '하트', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 85 L15 50 C5 38 10 18 25 18 C35 18 45 26 50 35 C55 26 65 18 75 18 C90 18 95 38 85 50 Z" fill="#FF6B9D"/></svg>` },
-  { emoji: '⭐', label: '별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,35 95,35 71,57 80,90 50,70 20,90 29,57 5,35 37,35" fill="#FFD166"/></svg>` },
-  { emoji: '☁️', label: '구름', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><ellipse cx="60" cy="55" rx="45" ry="22" fill="white" stroke="#ddd" stroke-width="2"/><circle cx="35" cy="45" r="20" fill="white" stroke="#ddd" stroke-width="2"/><circle cx="60" cy="35" r="25" fill="white" stroke="#ddd" stroke-width="2"/><circle cx="85" cy="45" r="18" fill="white" stroke="#ddd" stroke-width="2"/></svg>` },
-  { emoji: '☀️', label: '태양', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="22" fill="#FFD166"/>${Array.from({length:8},(_,i)=>{const a=i*45*Math.PI/180;const x1=50+32*Math.cos(a);const y1=50+32*Math.sin(a);const x2=50+42*Math.cos(a);const y2=50+42*Math.sin(a);return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#FFD166" stroke-width="5" stroke-linecap="round"/>`;}).join('')}</svg>` },
-  { emoji: '🌸', label: '꽃', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${Array.from({length:5},(_,i)=>{const a=i*72*Math.PI/180;const cx=50+22*Math.cos(a-Math.PI/2);const cy=50+22*Math.sin(a-Math.PI/2);return `<ellipse cx="${cx}" cy="${cy}" rx="12" ry="18" fill="#FFB3C6" transform="rotate(${i*72},${cx},${cy})"/>`;}).join('')}<circle cx="50" cy="50" r="14" fill="#FFE066"/></svg>` },
-  { emoji: '🌈', label: '무지개', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><path d="M5 55 Q5 5 50 5 Q95 5 95 55" fill="none" stroke="#FF6B6B" stroke-width="6" stroke-linecap="round"/><path d="M13 55 Q13 15 50 15 Q87 15 87 55" fill="none" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><path d="M21 55 Q21 25 50 25 Q79 25 79 55" fill="none" stroke="#7BC67E" stroke-width="6" stroke-linecap="round"/><path d="M29 55 Q29 33 50 33 Q71 33 71 55" fill="none" stroke="#74B9FF" stroke-width="6" stroke-linecap="round"/></svg>` },
-  { emoji: '🎀', label: '리본', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><path d="M60 40 L20 10 C10 5 5 20 15 28 L55 42 Z" fill="#FF6B9D"/><path d="M60 40 L100 10 C110 5 115 20 105 28 L65 42 Z" fill="#FF6B9D"/><path d="M60 40 L20 70 C10 75 5 60 15 52 L55 38 Z" fill="#FF8FA3"/><path d="M60 40 L100 70 C110 75 115 60 105 52 L65 38 Z" fill="#FF8FA3"/><circle cx="60" cy="40" r="10" fill="#FF4081"/></svg>` },
-  { emoji: '💫', label: '반짝', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 10 L54 42 L86 38 L58 52 L80 76 L50 58 L20 76 L42 52 L14 38 L46 42 Z" fill="#FFD166"/></svg>` },
-  { emoji: '🟥', label: '사각형', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="5" y="5" width="90" height="90" rx="12" fill="#FF6B6B"/></svg>` },
-  { emoji: '🔵', label: '원', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#74B9FF"/></svg>` },
-  { emoji: '🔶', label: '다이아', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="#FFD166"/></svg>` },
-  { emoji: '⭐', label: '오각별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,35 95,35 71,57 80,90 50,70 20,90 29,57 5,35 37,35" fill="#A29BFE"/></svg>` },
+  { label: '하트', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 85 L15 50 C5 38 10 18 25 18 C35 18 45 26 50 35 C55 26 65 18 75 18 C90 18 95 38 85 50 Z" fill="#FF6B9D"/></svg>` },
+  { label: '별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,35 95,35 71,57 80,90 50,70 20,90 29,57 5,35 37,35" fill="#FFD166"/></svg>` },
+  { label: '구름', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><ellipse cx="60" cy="55" rx="45" ry="22" fill="#E8F4FD" stroke="#BDE0F5" stroke-width="2"/><circle cx="35" cy="45" r="20" fill="#E8F4FD" stroke="#BDE0F5" stroke-width="2"/><circle cx="60" cy="35" r="25" fill="#E8F4FD" stroke="#BDE0F5" stroke-width="2"/><circle cx="85" cy="45" r="18" fill="#E8F4FD" stroke="#BDE0F5" stroke-width="2"/></svg>` },
+  { label: '태양', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#FFD166"/><line x1="50" y1="6" x2="50" y2="22" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="78" x2="50" y2="94" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="6" y1="50" x2="22" y2="50" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="78" y1="50" x2="94" y2="50" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="18" y1="18" x2="29" y2="29" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="71" y1="71" x2="82" y2="82" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="82" y1="18" x2="71" y2="29" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><line x1="18" y1="82" x2="29" y2="71" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/></svg>` },
+  { label: '꽃', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6"/><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6" transform="rotate(72,50,50)"/><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6" transform="rotate(144,50,50)"/><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6" transform="rotate(216,50,50)"/><ellipse cx="50" cy="28" rx="11" ry="18" fill="#FFB3C6" transform="rotate(288,50,50)"/><circle cx="50" cy="50" r="14" fill="#FFE066"/></svg>` },
+  { label: '무지개', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><path d="M5 55 Q5 5 50 5 Q95 5 95 55" fill="none" stroke="#FF6B6B" stroke-width="6" stroke-linecap="round"/><path d="M13 55 Q13 15 50 15 Q87 15 87 55" fill="none" stroke="#FFD166" stroke-width="6" stroke-linecap="round"/><path d="M21 55 Q21 25 50 25 Q79 25 79 55" fill="none" stroke="#7BC67E" stroke-width="6" stroke-linecap="round"/><path d="M29 55 Q29 33 50 33 Q71 33 71 55" fill="none" stroke="#74B9FF" stroke-width="6" stroke-linecap="round"/></svg>` },
+  { label: '리본', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><path d="M60 40 L20 10 C10 5 5 20 15 28 L55 42 Z" fill="#FF6B9D"/><path d="M60 40 L100 10 C110 5 115 20 105 28 L65 42 Z" fill="#FF6B9D"/><path d="M60 40 L20 70 C10 75 5 60 15 52 L55 38 Z" fill="#FF8FA3"/><path d="M60 40 L100 70 C110 75 115 60 105 52 L65 38 Z" fill="#FF8FA3"/><circle cx="60" cy="40" r="10" fill="#FF4081"/></svg>` },
+  { label: '반짝', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 54,42 86,38 58,52 80,76 50,58 20,76 42,52 14,38 46,42" fill="#FFD166"/></svg>` },
+  { label: '사각형', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="5" y="5" width="90" height="90" rx="12" fill="#FF6B6B"/></svg>` },
+  { label: '원', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#74B9FF"/></svg>` },
+  { label: '다이아', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="#FFD166"/></svg>` },
+  { label: '오각별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,35 95,35 71,57 80,90 50,70 20,90 29,57 5,35 37,35" fill="#A29BFE"/></svg>` },
 ]
 
 // ── 배경 팔레트 (일비롱 스타일) ───────────────────────────
@@ -199,16 +199,20 @@ export default function Studio() {
   // ── 스티커(SVG) 추가 ──────────────────────────────────────
   const addSticker = async (svgStr: string) => {
     const canvas = canvasRef.current; if (!canvas) return
-    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgStr)}`
-    const img = await fabric.FabricImage.fromURL(dataUrl)
-    img.set({
+    // loadSVGFromString으로 파싱 → Group으로 묶어 캔버스 중앙에 배치
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { objects } = await (fabric as any).loadSVGFromString(svgStr)
+    const filtered = (objects as fabric.FabricObject[]).filter(Boolean)
+    if (filtered.length === 0) return
+    const group = new fabric.Group(filtered, {
       left: canvasPreset.w / 2,
       top: canvasPreset.h / 2,
-      originX: 'center', originY: 'center',
-      scaleX: 1.2, scaleY: 1.2,
+      originX: 'center',
+      originY: 'center',
     })
-    canvas.add(img)
-    canvas.setActiveObject(img)
+    group.scaleToWidth(140)
+    canvas.add(group)
+    canvas.setActiveObject(group)
     canvas.renderAll()
   }
 
@@ -218,13 +222,25 @@ export default function Studio() {
     const url = URL.createObjectURL(file)
     const canvas = canvasRef.current; if (!canvas) return
     const img = await fabric.FabricImage.fromURL(url)
-    const maxW = canvasPreset.w * 0.5
-    if (img.width! > maxW) img.scaleToWidth(maxW)
-    img.set({ left: canvasPreset.w / 2, top: canvasPreset.h / 2, originX: 'center', originY: 'center' })
+
     if (circle) {
+      // 짧은 변 기준으로 scale → 원 지름 = 짧은 변 → 잘림 최소화
+      const targetSize = Math.min(canvasPreset.w, canvasPreset.h) * 0.42
+      const naturalW = img.width ?? 100
+      const naturalH = img.height ?? 100
+      if (naturalW <= naturalH) {
+        img.scaleToWidth(targetSize)    // 세로형: width 기준
+      } else {
+        img.scaleToHeight(targetSize)   // 가로형: height 기준
+      }
       const r = Math.min(img.getScaledWidth(), img.getScaledHeight()) / 2
       img.clipPath = new fabric.Circle({ radius: r, originX: 'center', originY: 'center' })
+    } else {
+      const maxW = canvasPreset.w * 0.5
+      if ((img.width ?? 0) > maxW) img.scaleToWidth(maxW)
     }
+
+    img.set({ left: canvasPreset.w / 2, top: canvasPreset.h / 2, originX: 'center', originY: 'center' })
     canvas.add(img)
     canvas.setActiveObject(img)
     canvas.renderAll()
@@ -381,7 +397,7 @@ export default function Studio() {
                     <button key={p.label} onClick={() => addText(p.sample, p.size, p.weight, p.color)}
                       className="w-full text-left px-4 py-3 rounded-xl border border-gray-100 hover:border-pink-200 hover:bg-pink-50 transition group">
                       <span className="block font-medium text-xs text-gray-400 mb-0.5 group-hover:text-pink-400">{p.label}</span>
-                      <span style={{ fontFamily: FONTS[0].value, fontSize: Math.min(p.size * 0.3, 22), color: p.color, fontWeight: p.weight }}>
+                      <span style={{ fontFamily: FONTS[0].value, fontSize: Math.max(Math.min(p.size * 0.38, 30), 18), color: p.color, fontWeight: p.weight }}>
                         {p.sample}
                       </span>
                     </button>
@@ -399,8 +415,8 @@ export default function Studio() {
                     <button key={s.label} onClick={() => addSticker(s.svg)}
                       className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-pink-50">
                       <div className="w-10 h-10 flex items-center justify-center"
-                        dangerouslySetInnerHTML={{ __html: s.svg.replace(/width="[^"]*"/, 'width="100%"').replace(/height="[^"]*"/, 'height="100%"') }} />
-                      <span className="text-xs text-gray-400" style={{ fontSize: 10 }}>{s.label}</span>
+                        dangerouslySetInnerHTML={{ __html: s.svg }} />
+                      <span className="text-gray-400" style={{ fontSize: 10 }}>{s.label}</span>
                     </button>
                   ))}
                 </div>
@@ -475,7 +491,7 @@ export default function Studio() {
                   <label className="w-full border-2 border-dashed border-purple-200 rounded-xl py-5 text-purple-400 text-xs text-center cursor-pointer hover:bg-purple-50 transition flex flex-col items-center gap-1">
                     <span className="text-2xl">👤</span>
                     <span className="font-medium">원형 사진 업로드</span>
-                    <span className="text-gray-400" style={{ fontSize: 10 }}>캔바 원형 프레임 스타일</span>
+                    <span className="text-gray-400" style={{ fontSize: 10 }}>원형 프레임 스타일</span>
                     <input type="file" accept="image/*" className="hidden"
                       onChange={e => addPhoto(e, true)} />
                   </label>

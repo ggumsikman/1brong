@@ -97,6 +97,45 @@ export default function Studio() {
   // 배경 탭
   const [bgTab, setBgTab] = useState<'solid'|'gradient'|'image'>('solid')
 
+  // 히스토리 (Undo/Redo)
+  const historyRef = useRef<string[]>([])
+  const historyIdxRef = useRef(-1)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+
+  const saveHistory = useCallback(() => {
+    const c = canvasRef.current; if (!c) return
+    const json = JSON.stringify(c.toJSON())
+    // 현재 위치 이후 기록 제거
+    historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1)
+    historyRef.current.push(json)
+    historyIdxRef.current = historyRef.current.length - 1
+    setCanUndo(historyIdxRef.current > 0)
+    setCanRedo(false)
+  }, [])
+
+  const undo = useCallback(async () => {
+    if (historyIdxRef.current <= 0) return
+    historyIdxRef.current -= 1
+    const c = canvasRef.current; if (!c) return
+    await c.loadFromJSON(JSON.parse(historyRef.current[historyIdxRef.current]))
+    c.renderAll()
+    setCanUndo(historyIdxRef.current > 0)
+    setCanRedo(true)
+    setSelected(null)
+  }, [])
+
+  const redo = useCallback(async () => {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return
+    historyIdxRef.current += 1
+    const c = canvasRef.current; if (!c) return
+    await c.loadFromJSON(JSON.parse(historyRef.current[historyIdxRef.current]))
+    c.renderAll()
+    setCanUndo(true)
+    setCanRedo(historyIdxRef.current < historyRef.current.length - 1)
+    setSelected(null)
+  }, [])
+
   // ── 구글 폰트 로드 ───────────────────────────────────────
   useEffect(() => {
     const link = document.createElement('link')
@@ -123,14 +162,25 @@ export default function Studio() {
     canvas.on('object:modified', () => {
       const obj = canvas.getActiveObject()
       if (obj) syncSelected(obj)
+      saveHistory()
     })
+    canvas.on('object:added', () => saveHistory())
+    canvas.on('object:removed', () => saveHistory())
 
-    // 키보드 Delete
+    // 초기 히스토리 저장
+    historyRef.current = []
+    historyIdxRef.current = -1
+    saveHistory()
+
+    // 키보드 Delete + Ctrl+Z/Y
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement
+      if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
         const obj = canvas.getActiveObject()
         if (obj) { canvas.remove(obj); canvas.renderAll(); setSelected(null) }
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo() }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo() }
     }
     window.addEventListener('keydown', onKey)
     recalcScale()
@@ -370,14 +420,23 @@ export default function Studio() {
           <span className="text-white/80 text-xs hidden sm:block">일비롱 디자인 스튜디오</span>
         </div>
         <div className="flex items-center gap-2">
-          {/* 실행 취소/재실행은 추후 추가 */}
+          {/* Undo / Redo */}
+          <button onClick={undo} disabled={!canUndo} title="실행 취소 (Ctrl+Z)"
+            className="bg-white/20 text-white font-bold text-sm px-3 py-2 rounded-xl hover:bg-white/30 transition disabled:opacity-30 disabled:cursor-not-allowed">
+            ↩
+          </button>
+          <button onClick={redo} disabled={!canRedo} title="다시 실행 (Ctrl+Y)"
+            className="bg-white/20 text-white font-bold text-sm px-3 py-2 rounded-xl hover:bg-white/30 transition disabled:opacity-30 disabled:cursor-not-allowed">
+            ↪
+          </button>
+          <div className="w-px h-5 bg-white/30" />
           <button onClick={print}
             className="bg-white/20 text-white font-bold text-sm px-4 py-2 rounded-xl hover:bg-white/30 transition flex items-center gap-1.5">
-            <span>🖨</span> 인쇄
+            🖨 인쇄
           </button>
           <button onClick={download}
-            className="bg-white text-pink-600 font-bold text-sm px-5 py-2 rounded-xl shadow-sm hover:shadow-md transition flex items-center gap-1.5">
-            <span>⬇</span> 다운로드
+            className="bg-white/20 text-white font-bold text-sm px-4 py-2 rounded-xl hover:bg-white/30 transition flex items-center gap-1.5">
+            ⬇ 다운로드
           </button>
         </div>
       </header>

@@ -125,6 +125,15 @@ export default function Studio() {
   // 드래그&드롭
   const [dragOver, setDragOver] = useState(false)
 
+  // 줌
+  const [canvasZoom, setCanvasZoom] = useState(1)
+
+  // 격자 / 가이드라인
+  const [showGrid, setShowGrid] = useState(false)
+  const showGridRef = useRef(false)
+  const [showGuides, setShowGuides] = useState(false)
+  const showGuidesRef = useRef(false)
+
   // 히스토리 (Undo/Redo)
   const historyRef = useRef<string[]>([])
   const historyIdxRef = useRef(-1)
@@ -189,8 +198,6 @@ export default function Studio() {
     })
     canvasRef.current = canvas
 
-    canvas.on('selection:created', (e) => syncSelected(e.selected?.[0] ?? null))
-    canvas.on('selection:updated', (e) => syncSelected(e.selected?.[0] ?? null))
     canvas.on('selection:cleared', () => setSelected(null))
     canvas.on('object:modified', () => {
       const obj = canvas.getActiveObject()
@@ -199,6 +206,88 @@ export default function Studio() {
     })
     canvas.on('object:added', () => saveHistory())
     canvas.on('object:removed', () => saveHistory())
+
+    // ── 마우스 휠 줌 ─────────────────────────────────────
+    canvas.on('mouse:wheel', (opt) => {
+      const delta = opt.e.deltaY
+      let zoom = canvas.getZoom()
+      zoom *= 0.999 ** delta
+      zoom = Math.max(0.1, Math.min(5, zoom))
+      canvas.zoomToPoint(new fabric.Point(opt.e.offsetX, opt.e.offsetY), zoom)
+      opt.e.preventDefault()
+      opt.e.stopPropagation()
+      setCanvasZoom(Math.round(zoom * 100) / 100)
+    })
+
+    // ── Alt+드래그 패닝 ──────────────────────────────────
+    const getXY = (e: MouseEvent | TouchEvent) => {
+      if ('touches' in e && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }
+    }
+    let isPanning = false, panStartX = 0, panStartY = 0
+    canvas.on('mouse:down', (opt) => {
+      const me = opt.e as MouseEvent
+      if (me.altKey) {
+        isPanning = true
+        canvas.selection = false
+        const { x, y } = getXY(opt.e as MouseEvent)
+        panStartX = x; panStartY = y
+        canvas.setCursor('grabbing')
+      }
+    })
+    canvas.on('mouse:move', (opt) => {
+      if (!isPanning) return
+      const { x, y } = getXY(opt.e as MouseEvent)
+      const vpt = canvas.viewportTransform!
+      vpt[4] += x - panStartX
+      vpt[5] += y - panStartY
+      panStartX = x; panStartY = y
+      canvas.requestRenderAll()
+    })
+    canvas.on('mouse:up', () => {
+      isPanning = false
+      canvas.selection = true
+    })
+
+    // ── 선택 이벤트 (다중 선택 포함) ─────────────────────
+    canvas.on('selection:created', () => {
+      const obj = canvas.getActiveObject()
+      syncSelected(obj ?? null)
+    })
+    canvas.on('selection:updated', () => {
+      const obj = canvas.getActiveObject()
+      syncSelected(obj ?? null)
+    })
+
+    // ── 격자 / 가이드라인 렌더 ────────────────────────────
+    canvas.on('after:render', () => {
+      const ctx = canvas.getContext()
+      const zoom = canvas.getZoom()
+      const w = canvasPreset.w, h = canvasPreset.h
+      if (showGridRef.current) {
+        const gs = 50
+        ctx.save()
+        ctx.strokeStyle = 'rgba(160,160,160,0.35)'
+        ctx.lineWidth = 1 / zoom
+        for (let x = 0; x <= w; x += gs) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke()
+        }
+        for (let y = 0; y <= h; y += gs) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke()
+        }
+        ctx.restore()
+      }
+      if (showGuidesRef.current) {
+        const cx = w / 2, cy = h / 2
+        ctx.save()
+        ctx.strokeStyle = 'rgba(255,107,157,0.55)'
+        ctx.lineWidth = 1 / zoom
+        ctx.setLineDash([6 / zoom, 4 / zoom])
+        ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke()
+        ctx.restore()
+      }
+    })
 
     // 초기 히스토리 저장
     historyRef.current = []
@@ -527,6 +616,35 @@ export default function Studio() {
     w.document.close()
   }
 
+  // ── 줌 버튼 ───────────────────────────────────────────────
+  const zoomBy = (factor: number) => {
+    const c = canvasRef.current; if (!c) return
+    const zoom = Math.max(0.1, Math.min(5, c.getZoom() * factor))
+    const cx = (c.width ?? 0) / 2, cy = (c.height ?? 0) / 2
+    c.zoomToPoint(new fabric.Point(cx, cy), zoom)
+    setCanvasZoom(Math.round(zoom * 100) / 100)
+  }
+  const zoomReset = () => {
+    const c = canvasRef.current; if (!c) return
+    c.setZoom(1)
+    c.absolutePan(new fabric.Point(0, 0))
+    setCanvasZoom(1)
+  }
+
+  // ── 격자 / 가이드라인 토글 ─────────────────────────────────
+  const toggleGrid = () => {
+    const next = !showGrid
+    showGridRef.current = next
+    setShowGrid(next)
+    canvasRef.current?.renderAll()
+  }
+  const toggleGuides = () => {
+    const next = !showGuides
+    showGuidesRef.current = next
+    setShowGuides(next)
+    canvasRef.current?.renderAll()
+  }
+
   // ── 패널 토글 ─────────────────────────────────────────────
   const togglePanel = (id: PanelType) => {
     setActivePanel(p => p === id ? null : id)
@@ -843,7 +961,7 @@ export default function Studio() {
           )}
           {/* 도움말 */}
           <div className="absolute top-4 right-4 text-xs text-gray-400 bg-white rounded-xl px-3 py-1.5 shadow-sm">
-            더블클릭: 텍스트 편집 · Del: 삭제
+            더블클릭: 텍스트 편집 · Del: 삭제 · Shift+클릭: 다중 선택 · Alt+드래그: 이동 · 휠: 줌
           </div>
           <div style={{
             transform: `scale(${scale})`,
@@ -862,10 +980,31 @@ export default function Studio() {
 
       {/* ══ 하단 바 ════════════════════════════════════════ */}
       <footer style={{ background: 'white', borderTop: '1px solid #f0e0ff' }}
-        className="px-5 py-2 flex items-center justify-between gap-4 flex-wrap">
+        className="px-4 py-1.5 flex items-center justify-between gap-3 flex-wrap shrink-0">
+        {/* 좌: 캔버스 정보 */}
         <span className="text-xs text-gray-400">
           {canvasPreset.label} · {canvasPreset.w}×{canvasPreset.h}px
         </span>
+        {/* 중: 줌 + 격자 + 가이드 */}
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => zoomBy(0.8)} className="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 text-sm hover:bg-gray-50 flex items-center justify-center">−</button>
+          <button onClick={zoomReset} className="px-2 h-7 rounded-lg border border-gray-200 text-gray-500 text-xs hover:bg-gray-50 min-w-[48px]">
+            {Math.round(canvasZoom * 100)}%
+          </button>
+          <button onClick={() => zoomBy(1.25)} className="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 text-sm hover:bg-gray-50 flex items-center justify-center">+</button>
+          <div className="w-px h-4 bg-gray-200 mx-1" />
+          <button onClick={toggleGrid}
+            className="px-2 h-7 rounded-lg text-xs font-medium border transition"
+            style={showGrid ? { background:'linear-gradient(135deg,#FF6B9D,#C77DFF)', color:'white', borderColor:'transparent' } : { borderColor:'#e5e7eb', color:'#888' }}>
+            격자
+          </button>
+          <button onClick={toggleGuides}
+            className="px-2 h-7 rounded-lg text-xs font-medium border transition"
+            style={showGuides ? { background:'linear-gradient(135deg,#FF6B9D,#C77DFF)', color:'white', borderColor:'transparent' } : { borderColor:'#e5e7eb', color:'#888' }}>
+            가이드
+          </button>
+        </div>
+        {/* 우: 저작권 */}
         <span className="text-xs text-gray-400 text-center">
           © 2026 일비롱디자인 · All rights reserved.
           <span className="mx-2 text-gray-300">|</span>

@@ -12,7 +12,34 @@ const FONTS = [
   { label: '귀여운체', value: 'Nanum Brush Script' },
   { label: '고딕', value: 'Noto Sans KR' },
   { label: '명조', value: 'Noto Serif KR' },
+  // ── 온글잎 무료폰트 (CDN: jsdelivr via noonnu.cc) ──
+  { label: '온글잎 콘콘체', value: 'OngleipKonkon' },
+  { label: '온글잎 박다현체', value: 'Ownglyph_ParkDaHyun' },
+  { label: '온글잎 은별체', value: 'OngleipEunbyeol' },
+  { label: '온글잎 류뚱체', value: 'OngleipRyudung' },
+  { label: '온글잎 떼롬체', value: 'OngleipTterom' },
+  { label: '온글잎 김콩해체', value: 'OngleipKimkonghae' },
+  { label: '온글잎 누카체', value: 'OngleipNuka' },
+  { label: '온글잎 글목록체', value: 'OngleipWFontList' },
+  { label: '온글잎 의연체', value: 'OngleipEoyeonce' },
+  { label: '온글잎 윤우체', value: 'Yoonwoo' },
+  { label: '온글잎 민혜체', value: 'Minhye' },
 ]
+
+// ── 온글잎 @font-face CSS ─────────────────────────────────
+const OWNGLYPH_CSS = `
+@font-face{font-family:'OngleipKonkon';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2412-1@1.0/Ownglyph_corncorn-Rg.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'Ownglyph_ParkDaHyun';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'OngleipEunbyeol';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2405-2@1.0/Ownglyph_eunbyul21-Rg.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'OngleipRyudung';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2405-2@1.0/Ownglyph_ryuttung-Rg.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'OngleipTterom';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-4@1.0/Ownglyph_ttaerom-Rg.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'OngleipKimkonghae';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_kimkonghae.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'OngleipNuka';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2405-2@1.0/Ownglyph_noocar-Rg.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'OngleipWFontList';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2501-1@1.1/Ownglyph_wiseelist-Rg.woff2') format('woff2');font-display:swap}
+@font-face{font-family:'OngleipEoyeonce';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.1/Uiyeun.woff') format('woff');font-display:swap}
+@font-face{font-family:'Yoonwoo';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.1/Yoonwoo.woff') format('woff');font-display:swap}
+@font-face{font-family:'Minhye';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Minhye.woff') format('woff');font-display:swap}
+`
 
 // ── 텍스트 프리셋 ─────────────────────────────────────────
 const TEXT_PRESETS = [
@@ -187,13 +214,16 @@ export default function Studio() {
     setSelected(null)
   }, [])
 
-  // ── 구글 폰트 로드 ───────────────────────────────────────
+  // ── 구글 폰트 + 온글잎 폰트 로드 ─────────────────────────
   useEffect(() => {
     const link = document.createElement('link')
     link.rel = 'stylesheet'
     link.href = 'https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Nanum+Brush+Script&family=Noto+Sans+KR:wght@400;700&family=Noto+Serif+KR:wght@400;700&display=swap'
     document.head.appendChild(link)
-    return () => { document.head.removeChild(link) }
+    const style = document.createElement('style')
+    style.textContent = OWNGLYPH_CSS
+    document.head.appendChild(style)
+    return () => { document.head.removeChild(link); document.head.removeChild(style) }
   }, [])
 
   // ── 캔버스 초기화 ─────────────────────────────────────────

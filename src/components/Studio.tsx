@@ -122,13 +122,14 @@ export default function Studio() {
   // 히스토리 (Undo/Redo)
   const historyRef = useRef<string[]>([])
   const historyIdxRef = useRef(-1)
+  const isHistoryOp = useRef(false)   // undo/redo 중 saveHistory 차단용
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
 
   const saveHistory = useCallback(() => {
+    if (isHistoryOp.current) return   // undo/redo 중 이벤트 무시
     const c = canvasRef.current; if (!c) return
     const json = JSON.stringify(c.toJSON())
-    // 현재 위치 이후 기록 제거
     historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1)
     historyRef.current.push(json)
     historyIdxRef.current = historyRef.current.length - 1
@@ -138,10 +139,12 @@ export default function Studio() {
 
   const undo = useCallback(async () => {
     if (historyIdxRef.current <= 0) return
-    historyIdxRef.current -= 1
     const c = canvasRef.current; if (!c) return
+    isHistoryOp.current = true
+    historyIdxRef.current -= 1
     await c.loadFromJSON(JSON.parse(historyRef.current[historyIdxRef.current]))
     c.renderAll()
+    isHistoryOp.current = false
     setCanUndo(historyIdxRef.current > 0)
     setCanRedo(true)
     setSelected(null)
@@ -149,10 +152,12 @@ export default function Studio() {
 
   const redo = useCallback(async () => {
     if (historyIdxRef.current >= historyRef.current.length - 1) return
-    historyIdxRef.current += 1
     const c = canvasRef.current; if (!c) return
+    isHistoryOp.current = true
+    historyIdxRef.current += 1
     await c.loadFromJSON(JSON.parse(historyRef.current[historyIdxRef.current]))
     c.renderAll()
+    isHistoryOp.current = false
     setCanUndo(true)
     setCanRedo(historyIdxRef.current < historyRef.current.length - 1)
     setSelected(null)

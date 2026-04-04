@@ -122,6 +122,9 @@ export default function Studio() {
   // 클립보드 (내부 복사/붙여넣기)
   const clipboardRef = useRef<fabric.FabricObject | null>(null)
 
+  // 드래그&드롭
+  const [dragOver, setDragOver] = useState(false)
+
   // 히스토리 (Undo/Redo)
   const historyRef = useRef<string[]>([])
   const historyIdxRef = useRef(-1)
@@ -473,6 +476,21 @@ export default function Studio() {
     }
   }
 
+  // ── 드래그&드롭 이미지 추가 ───────────────────────────────
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'))
+    if (!file) return
+    const canvas = canvasRef.current; if (!canvas) return
+    const url = URL.createObjectURL(file)
+    const img = await fabric.FabricImage.fromURL(url)
+    const maxW = canvasPreset.w * 0.5
+    if ((img.width ?? 0) > maxW) img.scaleToWidth(maxW)
+    img.set({ left: canvasPreset.w / 2, top: canvasPreset.h / 2, originX: 'center', originY: 'center' })
+    canvas.add(img); canvas.setActiveObject(img); canvas.renderAll()
+  }
+
   // ── 삭제 ─────────────────────────────────────────────────
   const deleteSelected = () => {
     const c = canvasRef.current; if (!c) return
@@ -808,7 +826,21 @@ export default function Studio() {
         {/* ══ 캔버스 영역 ══════════════════════════════════ */}
         <main className="flex-1 flex items-center justify-center overflow-auto p-6 relative"
           ref={wrapRef}
-          style={{ background: 'radial-gradient(circle at center, #F5EEF8 0%, #FFF0F8 100%)' }}>
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false) }}
+          onDrop={handleDrop}
+          style={{ background: dragOver
+            ? 'radial-gradient(circle at center, #FFD6EF 0%, #EDD6FF 100%)'
+            : 'radial-gradient(circle at center, #F5EEF8 0%, #FFF0F8 100%)' }}>
+          {/* 드래그 오버레이 */}
+          {dragOver && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+              <div className="bg-white/80 rounded-2xl px-8 py-6 text-center shadow-xl border-2 border-dashed border-pink-400">
+                <div className="text-4xl mb-2">🖼</div>
+                <p className="font-bold text-pink-500 text-sm">여기에 놓으면 캔버스에 추가됩니다</p>
+              </div>
+            </div>
+          )}
           {/* 도움말 */}
           <div className="absolute top-4 right-4 text-xs text-gray-400 bg-white rounded-xl px-3 py-1.5 shadow-sm">
             더블클릭: 텍스트 편집 · Del: 삭제

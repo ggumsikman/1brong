@@ -617,12 +617,15 @@ export default function Studio() {
 
       {/* ══ 하단 바 ════════════════════════════════════════ */}
       <footer style={{ background: 'white', borderTop: '1px solid #f0e0ff' }}
-        className="px-5 py-2 flex items-center justify-between">
+        className="px-5 py-2 flex items-center justify-between gap-4 flex-wrap">
         <span className="text-xs text-gray-400">
           {canvasPreset.label} · {canvasPreset.w}×{canvasPreset.h}px
         </span>
-        <span className="text-xs font-bold" style={{ color: '#C77DFF' }}>
-          Made with 1B롱 ✨
+        <span className="text-xs text-gray-400 text-center">
+          © 2026 일비롱디자인 · All rights reserved.
+          <span className="mx-2 text-gray-300">|</span>
+          앱 제작 ·{' '}
+          <span className="font-semibold" style={{ color: '#C77DFF' }}>꿈식판 꿈식맨</span>
         </span>
       </footer>
     </div>

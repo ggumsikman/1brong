@@ -114,6 +114,9 @@ export default function Studio() {
   // 배경 탭
   const [bgTab, setBgTab] = useState<'solid'|'gradient'|'image'>('solid')
 
+  // 요소 탭
+  const [elemTab, setElemTab] = useState<'ilbirong'|'shape'>('ilbirong')
+
   // 히스토리 (Undo/Redo)
   const historyRef = useRef<string[]>([])
   const historyIdxRef = useRef(-1)
@@ -489,12 +492,12 @@ export default function Studio() {
 
         {/* ══ 좌측 패널 ═══════════════════════════════════ */}
         {activePanel && (
-          <aside className="w-64 bg-white border-r border-gray-100 overflow-y-auto shrink-0"
+          <aside className="w-64 bg-white border-r border-gray-100 flex flex-col overflow-hidden shrink-0"
             style={{ boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}>
 
             {/* 선택된 텍스트 편집 패널 (최상단) */}
             {isText && (
-              <div className="p-4 border-b-2 border-pink-100" style={{ background: '#FFF0F8' }}>
+              <div className="p-4 border-b-2 border-pink-100 shrink-0" style={{ background: '#FFF0F8' }}>
                 <p className="text-xs font-bold text-pink-500 mb-3 uppercase tracking-wide">텍스트 편집</p>
                 {/* 폰트 */}
                 <label className="text-xs text-gray-500 block mb-1">폰트</label>
@@ -536,7 +539,7 @@ export default function Studio() {
 
             {/* ── 텍스트 패널 ── */}
             {activePanel === '텍스트' && (
-              <div className="p-4">
+              <div className="p-4 overflow-y-auto flex-1">
                 <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">텍스트 추가</p>
                 <div className="space-y-2">
                   {TEXT_PRESETS.map(p => (
@@ -554,36 +557,50 @@ export default function Studio() {
 
             {/* ── 요소 패널 ── */}
             {activePanel === '요소' && (
-              <div className="p-4">
-                {/* 일비롱 손그림 */}
-                <p className="text-xs font-bold text-pink-400 mb-2 uppercase tracking-wide">일비롱 손그림</p>
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {ILBIRONG_STICKERS.map(name => (
-                    <button key={name} onClick={() => addIlbirong(name)}
-                      className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-1.5 bg-gray-50 hover:bg-pink-50">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`${STICKER_BASE}/${encodeURIComponent(name)}.png`} alt={name}
-                        className="w-9 h-9 object-contain" loading="lazy" />
-                      <span className="text-gray-400 leading-tight text-center w-full truncate px-0.5" style={{ fontSize: 9 }}>{name}</span>
+              <div className="flex flex-col h-full">
+                {/* 탭 */}
+                <div className="flex gap-1 p-3 pb-0 shrink-0">
+                  {([['ilbirong', '일비롱 손그림'], ['shape', '도형']] as const).map(([key, label]) => (
+                    <button key={key} onClick={() => setElemTab(key)}
+                      className="flex-1 py-2 rounded-lg text-xs font-bold transition"
+                      style={elemTab === key
+                        ? { background: 'linear-gradient(135deg,#FF6B9D,#C77DFF)', color: 'white' }
+                        : { background: '#f3f4f6', color: '#888' }}>
+                      {label}
                     </button>
                   ))}
                 </div>
-                {/* 도형 */}
-                <p className="text-xs font-bold text-purple-400 mb-2 uppercase tracking-wide">도형</p>
-                <div className="grid grid-cols-4 gap-2 mb-4">
-                  {SHAPES.map(s => (
-                    <button key={s.label} onClick={() => addSticker(s.svg)}
-                      className="aspect-square rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-purple-50">
-                      <div className="w-8 h-8 flex items-center justify-center"
-                        dangerouslySetInnerHTML={{ __html: s.svg }} />
-                      <span className="text-gray-400" style={{ fontSize: 9 }}>{s.label}</span>
-                    </button>
-                  ))}
+                {/* 콘텐츠 (스크롤) */}
+                <div className="flex-1 overflow-y-auto p-3">
+                  {elemTab === 'ilbirong' && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {ILBIRONG_STICKERS.map(name => (
+                        <button key={name} onClick={() => addIlbirong(name)}
+                          className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-1.5 bg-gray-50 hover:bg-pink-50">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={`${STICKER_BASE}/${encodeURIComponent(name)}.png`} alt={name}
+                            className="w-9 h-9 object-contain" loading="lazy" />
+                          <span className="text-gray-400 leading-tight text-center w-full truncate px-0.5" style={{ fontSize: 9 }}>{name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {elemTab === 'shape' && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {SHAPES.map(s => (
+                        <button key={s.label} onClick={() => addSticker(s.svg)}
+                          className="aspect-square rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-purple-50">
+                          <div className="w-8 h-8 flex items-center justify-center"
+                            dangerouslySetInnerHTML={{ __html: s.svg }} />
+                          <span className="text-gray-400" style={{ fontSize: 9 }}>{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {/* 이미지 선택 시 레이어/삭제 */}
+                {/* 선택 시 레이어/삭제 */}
                 {selected && !isText && (
-                  <div className="mt-2 pt-4 border-t border-gray-100">
-                    <p className="text-xs font-bold text-gray-400 mb-2">요소 편집</p>
+                  <div className="shrink-0 px-3 pb-3 pt-2 border-t border-gray-100">
                     <div className="flex gap-1.5">
                       <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↓ 뒤로</button>
                       <button onClick={bringFwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↑ 앞으로</button>
@@ -596,7 +613,7 @@ export default function Studio() {
 
             {/* ── 배경 패널 ── */}
             {activePanel === '배경' && (
-              <div className="p-4">
+              <div className="p-4 overflow-y-auto flex-1">
                 <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">배경</p>
                 <div className="flex gap-1 mb-3">
                   {(['solid','gradient','image'] as const).map(t => (
@@ -638,7 +655,7 @@ export default function Studio() {
 
             {/* ── 사진 패널 ── */}
             {activePanel === '사진' && (
-              <div className="p-4">
+              <div className="p-4 overflow-y-auto flex-1">
                 <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">사진 추가</p>
                 <div className="space-y-2">
                   <label className="w-full border-2 border-dashed border-pink-200 rounded-xl py-5 text-pink-400 text-xs text-center cursor-pointer hover:bg-pink-50 transition flex flex-col items-center gap-1">
@@ -670,7 +687,7 @@ export default function Studio() {
 
             {/* ── 크기 패널 ── */}
             {activePanel === '크기' && (
-              <div className="p-4">
+              <div className="p-4 overflow-y-auto flex-1">
                 <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">캔버스 크기</p>
                 <div className="space-y-1.5">
                   {CANVAS_PRESETS.map(p => (

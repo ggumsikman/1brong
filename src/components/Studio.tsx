@@ -417,8 +417,8 @@ export default function Studio() {
     canvas?.renderAll()
   }
 
-  // ── 표 생성 (귀여운 테마 + interactive 셀) ─────────────────
-  const createTable = (rows: number, cols: number, themeIdx: number, existingTexts?: string[][], pos?: {left:number;top:number}) => {
+  // ── 표 생성 (귀여운 테마) ─────────────────────────────────
+  const createTable = (rows: number, cols: number, themeIdx: number, pos?: {left:number;top:number}) => {
     const canvas = canvasRef.current; if (!canvas) return
     const theme = TABLE_THEMES[themeIdx] ?? TABLE_THEMES[0]
     const cellW = 90, cellH = 38
@@ -434,35 +434,26 @@ export default function Studio() {
           width: cellW, height: cellH,
           fill: isHeader ? theme.headerBg : (r % 2 === 0 ? theme.cellBgAlt : theme.cellBg),
           stroke: theme.border, strokeWidth: 0.8,
-          selectable: false, evented: false,
         }))
       }
     }
-    // 둥근 외곽 테두리
-    objs.push(new fabric.Rect({
-      left: -1.5, top: -1.5, width: tableW + 3, height: tableH + 3,
-      rx: theme.radius, ry: theme.radius,
-      fill: 'transparent', stroke: theme.border, strokeWidth: 2.5,
-      selectable: false, evented: false,
-    }))
-    // 셀 텍스트 (IText — 더블클릭 편집)
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const txt = existingTexts?.[r]?.[c] ?? ''
-        objs.push(new fabric.IText(txt, {
-          left: c * cellW + cellW / 2, top: r * cellH + cellH / 2,
-          fontSize: 14, fontFamily: FONTS[0].value,
-          fontWeight: r === 0 ? 'bold' : 'normal',
-          textAlign: 'center', fill: theme.text,
-          originX: 'center', originY: 'center',
-        }))
-      }
+    // 가로선 (굵은 구분선)
+    for (let r = 0; r <= rows; r++) {
+      objs.push(new fabric.Line([0, r * cellH, tableW, r * cellH], {
+        stroke: theme.border, strokeWidth: r === 0 || r === 1 || r === rows ? 2 : 0.8,
+      }))
     }
+    // 세로선
+    for (let c = 0; c <= cols; c++) {
+      objs.push(new fabric.Line([c * cellW, 0, c * cellW, tableH], {
+        stroke: theme.border, strokeWidth: c === 0 || c === cols ? 2 : 0.8,
+      }))
+    }
+
     const group = new fabric.Group(objs, {
       left: pos?.left ?? canvasPreset.w / 2,
       top: pos?.top ?? canvasPreset.h / 2,
       originX: 'center', originY: 'center',
-      subTargetCheck: true, interactive: true,
     })
     // 메타데이터
     const g = group as fabric.Group & { _tRows: number; _tCols: number; _tTheme: number }
@@ -475,15 +466,10 @@ export default function Studio() {
     const c = canvasRef.current; if (!c) return
     const obj = c.getActiveObject() as fabric.Group & { _tRows?: number; _tCols?: number; _tTheme?: number }
     if (!obj || obj._tRows == null) return
-    const oldR = obj._tRows, oldC = obj._tCols!, themeIdx = obj._tTheme!
-    const newR = Math.max(1, oldR + dRow), newC = Math.max(1, oldC + dCol)
-    // 기존 텍스트 추출
-    const itexts = obj.getObjects().filter(o => o.type === 'i-text') as fabric.IText[]
-    const texts: string[][] = []
-    for (let r = 0; r < oldR; r++) { texts[r] = []; for (let cc = 0; cc < oldC; cc++) texts[r][cc] = itexts[r * oldC + cc]?.text ?? '' }
+    const newR = Math.max(1, obj._tRows + dRow), newC = Math.max(1, obj._tCols! + dCol)
     const pos = { left: obj.left ?? canvasPreset.w / 2, top: obj.top ?? canvasPreset.h / 2 }
     c.remove(obj); setSelected(null)
-    createTable(newR, newC, themeIdx, texts, pos)
+    createTable(newR, newC, obj._tTheme!, pos)
   }
 
   // 선택된 표 감지
@@ -1018,7 +1004,7 @@ export default function Studio() {
                             <button onClick={() => modifyTable(0, 1)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">+ 열 추가</button>
                             <button onClick={() => modifyTable(0, -1)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">− 열 삭제</button>
                           </div>
-                          <p className="text-gray-400" style={{ fontSize: 10 }}>더블클릭으로 셀 텍스트 편집</p>
+                          <p className="text-gray-400" style={{ fontSize: 10 }}>텍스트: 왼쪽 텍스트 메뉴로 표 위에 추가</p>
                         </div>
                       )}
                     </div>

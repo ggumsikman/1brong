@@ -109,6 +109,18 @@ const BG_GRADIENTS = [
   { label: '밤하늘', stops: ['#2D3436', '#6C5CE7'] },
 ]
 
+// ── 프레임 (clipPath 모양) ─────────────────────────────────
+const FRAMES = [
+  { label: '원형', icon: '⭕', makePath: (s: number) => new fabric.Circle({ radius: s / 2, left: 0, top: 0, originX: 'center', originY: 'center' }) },
+  { label: '둥근 사각', icon: '⬜', makePath: (s: number) => new fabric.Rect({ width: s, height: s, rx: s * 0.15, ry: s * 0.15, left: 0, top: 0, originX: 'center', originY: 'center' }) },
+  { label: '하트', icon: '💗', makeSvg: () => `<svg viewBox="0 0 100 100"><path d="M50 88 C25 65 2 45 2 28 2 14 12 2 26 2 36 2 46 10 50 18 54 10 64 2 74 2 88 2 98 14 98 28 98 45 75 65 50 88Z"/></svg>` },
+  { label: '별', icon: '⭐', makeSvg: () => `<svg viewBox="0 0 100 100"><polygon points="50,2 63,35 98,35 70,57 80,92 50,72 20,92 30,57 2,35 37,35"/></svg>` },
+  { label: '다이아', icon: '💎', makePath: (s: number) => new fabric.Polygon([{ x: s/2, y: 0 }, { x: s, y: s/2 }, { x: s/2, y: s }, { x: 0, y: s/2 }], { left: 0, top: 0, originX: 'center', originY: 'center' }) },
+  { label: '꽃', icon: '🌸', makeSvg: () => `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="22" rx="14" ry="22"/><ellipse cx="50" cy="22" rx="14" ry="22" transform="rotate(72,50,50)"/><ellipse cx="50" cy="22" rx="14" ry="22" transform="rotate(144,50,50)"/><ellipse cx="50" cy="22" rx="14" ry="22" transform="rotate(216,50,50)"/><ellipse cx="50" cy="22" rx="14" ry="22" transform="rotate(288,50,50)"/><circle cx="50" cy="50" r="18"/></svg>` },
+  { label: '육각형', icon: '⬡', makePath: (s: number) => new fabric.Polygon(Array.from({length:6},(_,i)=>({x:s/2+s/2*Math.cos(Math.PI/3*i-Math.PI/6),y:s/2+s/2*Math.sin(Math.PI/3*i-Math.PI/6)})), { left: 0, top: 0, originX: 'center', originY: 'center' }) },
+  { label: '물방울', icon: '💧', makeSvg: () => `<svg viewBox="0 0 100 120"><path d="M50 5 C50 5 10 55 10 75 10 97 28 115 50 115 72 115 90 97 90 75 90 55 50 5 50 5Z"/></svg>` },
+]
+
 // ── 캔버스 프리셋 ─────────────────────────────────────────
 const CANVAS_PRESETS = [
   { label: '정사각형', icon: '⬛', w: 600, h: 600 },
@@ -121,12 +133,13 @@ const CANVAS_PRESETS = [
 ]
 
 // ── 사이드바 메뉴 ─────────────────────────────────────────
-type PanelType = '텍스트' | '요소' | '배경' | '사진' | '캔버스'
+type PanelType = '텍스트' | '요소' | '프레임' | '배경' | '사진' | '캔버스'
 const SIDEBAR_MENUS: { id: PanelType; icon: string; label: string }[] = [
   { id: '텍스트', icon: 'T', label: '텍스트' },
   { id: '요소', icon: '★', label: '요소' },
+  { id: '프레임', icon: '🖼', label: '프레임' },
   { id: '배경', icon: '🎨', label: '배경' },
-  { id: '사진', icon: '🖼', label: '사진' },
+  { id: '사진', icon: '📷', label: '사진' },
   { id: '캔버스', icon: '⊞', label: '캔버스' },
 ]
 
@@ -519,6 +532,51 @@ export default function Studio() {
     canvas.add(group)
     canvas.setActiveObject(group)
     canvas.renderAll()
+  }
+
+  // ── 프레임 추가 (clipPath로 사진 클리핑) ───────────────────
+  const frameFileRef = useRef<HTMLInputElement>(null)
+  const pendingFrameRef = useRef<typeof FRAMES[0] | null>(null)
+
+  const onFrameSelect = (frame: typeof FRAMES[0]) => {
+    pendingFrameRef.current = frame
+    frameFileRef.current?.click()
+  }
+
+  const onFramePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    const frame = pendingFrameRef.current; if (!frame) return
+    const canvas = canvasRef.current; if (!canvas) return
+    const url = URL.createObjectURL(file)
+    const img = await fabric.FabricImage.fromURL(url)
+    const size = Math.min(canvasPreset.w, canvasPreset.h) * 0.45
+
+    // clipPath 생성
+    let clip: fabric.FabricObject
+    if (frame.makePath) {
+      clip = frame.makePath(size)
+    } else if (frame.makeSvg) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { objects } = await (fabric as any).loadSVGFromString(frame.makeSvg())
+      const filtered = (objects as fabric.FabricObject[]).filter(Boolean)
+      const group = new fabric.Group(filtered)
+      group.scaleToWidth(size)
+      clip = group
+      clip.set({ originX: 'center', originY: 'center', left: 0, top: 0 })
+    } else return
+
+    // 이미지를 프레임 크기에 맞게 cover 스케일
+    const imgW = img.width ?? 1, imgH = img.height ?? 1
+    const sc = Math.max(size / imgW, size / imgH)
+    img.set({
+      scaleX: sc, scaleY: sc,
+      left: canvasPreset.w / 2, top: canvasPreset.h / 2,
+      originX: 'center', originY: 'center',
+      clipPath: clip,
+    })
+    canvas.add(img); canvas.setActiveObject(img); canvas.renderAll()
+    e.target.value = ''
+    pendingFrameRef.current = null
   }
 
   // ── 일비롱 손그림 PNG 추가 ────────────────────────────────
@@ -1053,6 +1111,33 @@ export default function Studio() {
                 {/* 선택 시 레이어/삭제 */}
                 {selected && !isText && (
                   <div className="shrink-0 px-3 pb-3 pt-2 border-t border-gray-100">
+                    <div className="flex gap-1.5">
+                      <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↓ 뒤로</button>
+                      <button onClick={bringFwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↑ 앞으로</button>
+                      <button onClick={deleteSelected} className="flex-1 border border-red-200 text-red-400 text-xs py-1.5 rounded-lg hover:bg-red-50 font-medium">🗑 삭제</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── 프레임 패널 ── */}
+            {activePanel === '프레임' && (
+              <div className="p-4 overflow-y-auto flex-1">
+                <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">프레임</p>
+                <p className="text-gray-400 mb-3" style={{ fontSize: 10 }}>모양을 선택하면 사진을 업로드할 수 있어요</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {FRAMES.map(f => (
+                    <button key={f.label} onClick={() => onFrameSelect(f)}
+                      className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-pink-50">
+                      <span className="text-xl">{f.icon}</span>
+                      <span className="text-gray-400" style={{ fontSize: 9 }}>{f.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <input ref={frameFileRef} type="file" accept="image/*" className="hidden" onChange={onFramePhoto} />
+                {selected && !isText && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
                     <div className="flex gap-1.5">
                       <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↓ 뒤로</button>
                       <button onClick={bringFwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">↑ 앞으로</button>

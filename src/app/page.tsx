@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import Gate from '@/components/Gate'
 import Studio from '@/components/Studio'
 
 const Loading = () => (
@@ -14,7 +15,13 @@ const Loading = () => (
 
 export default function Page() {
   const [mounted, setMounted] = useState(false)
+  const [authed, setAuthed] = useState(false)
+
   useEffect(() => { setMounted(true) }, [])
+
+  const handleEnter = useCallback(() => { setAuthed(true) }, [])
+
   if (!mounted) return <Loading />
+  if (!authed) return <Gate onEnter={handleEnter} />
   return <Studio />
 }

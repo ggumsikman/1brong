@@ -136,6 +136,7 @@ export default function Studio() {
   const wrapRef = useRef<HTMLDivElement>(null)
   const bgFileRef = useRef<HTMLInputElement>(null)
   const photoFileRef = useRef<HTMLInputElement>(null)
+  const tableMetaRef = useRef<Map<string, { rows: number; cols: number; theme: number }>>(new Map())
 
   const [activePanel, setActivePanel] = useState<PanelType | null>('캔버스')
   const [canvasPreset, setCanvasPreset] = useState(CANVAS_PRESETS[0])
@@ -252,8 +253,29 @@ export default function Studio() {
     canvasRef.current = canvas
 
     canvas.on('selection:cleared', () => setSelected(null))
+
+    // ── 표 셀 드래그 시 전체 동기 이동 ────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getName = (o: any): string => o?.name ?? ''
+    canvas.on('object:moving', (opt) => {
+      const obj = opt.target; if (!getName(obj).includes('-tx-')) return
+      const n = getName(obj)
+      const tableId = n.substring(0, n.indexOf('-tx-'))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const a = obj as any
+      if (!a._tblInit) {
+        const all = canvas.getObjects().filter(o => o !== obj && getName(o).startsWith(tableId))
+        a._tblSibs = all.map(s => ({ o: s, l: s.left ?? 0, t: s.top ?? 0 }))
+        a._tblSL = obj!.left ?? 0; a._tblST = obj!.top ?? 0; a._tblInit = true
+      }
+      const dx = (obj!.left ?? 0) - a._tblSL, dy = (obj!.top ?? 0) - a._tblST
+      for (const s of a._tblSibs ?? []) { s.o.set({ left: s.l + dx, top: s.t + dy }); s.o.setCoords() }
+    })
+
     canvas.on('object:modified', () => {
       const obj = canvas.getActiveObject()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (obj && (obj as any)._tblInit) { delete (obj as any)._tblSibs; delete (obj as any)._tblSL; delete (obj as any)._tblST; delete (obj as any)._tblInit }
       if (obj) syncSelected(obj)
       saveHistory()
     })
@@ -417,65 +439,92 @@ export default function Studio() {
     canvas?.renderAll()
   }
 
-  // ── 표 생성 (귀여운 테마) ─────────────────────────────────
-  const createTable = (rows: number, cols: number, themeIdx: number, pos?: {left:number;top:number}) => {
+  // ── 표 생성 (개별 오브젝트 — 셀 클릭 편집 가능) ───────────
+  const createTable = (rows: number, cols: number, themeIdx: number, existingTexts?: string[][], pos?: {left:number;top:number}) => {
     const canvas = canvasRef.current; if (!canvas) return
     const theme = TABLE_THEMES[themeIdx] ?? TABLE_THEMES[0]
     const cellW = 90, cellH = 38
-    const tableW = cols * cellW, tableH = rows * cellH
-    const objs: fabric.FabricObject[] = []
+    const tableId = `tbl${Date.now()}`
+    const cx = pos?.left ?? canvasPreset.w / 2, cy = pos?.top ?? canvasPreset.h / 2
+    const startX = cx - (cols * cellW) / 2, startY = cy - (rows * cellH) / 2
 
-    // 셀 배경 (Rect)
+    isHistoryOp.current = true // 여러 오브젝트 추가 → 히스토리 1회만
+    // 셀 배경 (Rect — 선택/이벤트 불가)
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const isHeader = r === 0
-        objs.push(new fabric.Rect({
-          left: c * cellW, top: r * cellH,
+        canvas.add(new fabric.Rect({
+          left: startX + c * cellW, top: startY + r * cellH,
           width: cellW, height: cellH,
           fill: isHeader ? theme.headerBg : (r % 2 === 0 ? theme.cellBgAlt : theme.cellBg),
           stroke: theme.border, strokeWidth: 0.8,
+          selectable: false, evented: false,
+          name: `${tableId}-bg-${r}-${c}`,
         }))
       }
     }
-    // 가로선 (굵은 구분선)
-    for (let r = 0; r <= rows; r++) {
-      objs.push(new fabric.Line([0, r * cellH, tableW, r * cellH], {
-        stroke: theme.border, strokeWidth: r === 0 || r === 1 || r === rows ? 2 : 0.8,
-      }))
+    // 셀 텍스트 (IText — 클릭 선택 / 더블클릭 편집)
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const txt = existingTexts?.[r]?.[c] ?? ''
+        canvas.add(new fabric.IText(txt, {
+          left: startX + c * cellW + cellW / 2,
+          top: startY + r * cellH + cellH / 2,
+          originX: 'center', originY: 'center',
+          fontSize: 14, fontFamily: FONTS[0].value,
+          fontWeight: r === 0 ? 'bold' : 'normal',
+          textAlign: 'center', fill: theme.text,
+          name: `${tableId}-tx-${r}-${c}`,
+        }))
+      }
     }
-    // 세로선
-    for (let c = 0; c <= cols; c++) {
-      objs.push(new fabric.Line([c * cellW, 0, c * cellW, tableH], {
-        stroke: theme.border, strokeWidth: c === 0 || c === cols ? 2 : 0.8,
-      }))
-    }
-
-    const group = new fabric.Group(objs, {
-      left: pos?.left ?? canvasPreset.w / 2,
-      top: pos?.top ?? canvasPreset.h / 2,
-      originX: 'center', originY: 'center',
-    })
-    // 메타데이터
-    const g = group as fabric.Group & { _tRows: number; _tCols: number; _tTheme: number }
-    g._tRows = rows; g._tCols = cols; g._tTheme = themeIdx
-    canvas.add(group); canvas.setActiveObject(group); canvas.renderAll()
+    isHistoryOp.current = false
+    tableMetaRef.current.set(tableId, { rows, cols, theme: themeIdx })
+    saveHistory()
+    canvas.renderAll()
   }
 
   // ── 표 행/열 추가·삭제 ──────────────────────────────────────
-  const modifyTable = (dRow: number, dCol: number) => {
-    const c = canvasRef.current; if (!c) return
-    const obj = c.getActiveObject() as fabric.Group & { _tRows?: number; _tCols?: number; _tTheme?: number }
-    if (!obj || obj._tRows == null) return
-    const newR = Math.max(1, obj._tRows + dRow), newC = Math.max(1, obj._tCols! + dCol)
-    const pos = { left: obj.left ?? canvasPreset.w / 2, top: obj.top ?? canvasPreset.h / 2 }
-    c.remove(obj); setSelected(null)
-    createTable(newR, newC, obj._tTheme!, pos)
+  const getSelectedTableId = (): string | null => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const name: string = (selected as any)?.name ?? ''
+    if (!name.includes('-tx-')) return null
+    return name.substring(0, name.indexOf('-tx-'))
   }
 
-  // 선택된 표 감지
-  const selectedTable = selected && (selected as unknown as { _tRows?: number })._tRows != null
-    ? (selected as fabric.Group & { _tRows: number; _tCols: number; _tTheme: number })
-    : null
+  const modifyTable = (dRow: number, dCol: number) => {
+    const c = canvasRef.current; if (!c) return
+    const tableId = getSelectedTableId(); if (!tableId) return
+    const meta = tableMetaRef.current.get(tableId); if (!meta) return
+    const newR = Math.max(1, meta.rows + dRow), newC = Math.max(1, meta.cols + dCol)
+    // 기존 텍스트 읽기
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gn = (o: any): string => o?.name ?? ''
+    const texts: string[][] = []
+    for (let r = 0; r < meta.rows; r++) {
+      texts[r] = []
+      for (let cc = 0; cc < meta.cols; cc++) {
+        const obj = c.getObjects().find(o => gn(o) === `${tableId}-tx-${r}-${cc}`) as fabric.IText | undefined
+        texts[r][cc] = obj?.text ?? ''
+      }
+    }
+    // 현재 위치 계산 (배경 Rect들의 중심)
+    const bgs = c.getObjects().filter(o => gn(o).startsWith(`${tableId}-bg-`))
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    bgs.forEach(o => { minX = Math.min(minX, o.left ?? 0); minY = Math.min(minY, o.top ?? 0); maxX = Math.max(maxX, (o.left ?? 0) + (o.width ?? 0)); maxY = Math.max(maxY, (o.top ?? 0) + (o.height ?? 0)) })
+    const center = { left: (minX + maxX) / 2, top: (minY + maxY) / 2 }
+    // 제거 후 재생성
+    isHistoryOp.current = true
+    c.getObjects().filter(o => gn(o).startsWith(tableId)).forEach(o => c.remove(o))
+    isHistoryOp.current = false
+    tableMetaRef.current.delete(tableId)
+    setSelected(null)
+    createTable(newR, newC, meta.theme, texts, center)
+  }
+
+  // 선택된 표 메타 감지
+  const selectedTableId = getSelectedTableId()
+  const selectedTableMeta = selectedTableId ? tableMetaRef.current.get(selectedTableId) : null
 
   // ── 스티커(SVG) 추가 ──────────────────────────────────────
   const addSticker = async (svgStr: string) => {
@@ -995,9 +1044,9 @@ export default function Studio() {
                         표 만들기
                       </button>
                       {/* 선택된 표 편집 */}
-                      {selectedTable && (
+                      {selectedTableMeta && (
                         <div className="border-t border-gray-100 pt-3">
-                          <p className="text-xs font-bold text-pink-400 mb-2">표 편집 ({selectedTable._tRows}×{selectedTable._tCols})</p>
+                          <p className="text-xs font-bold text-pink-400 mb-2">표 편집 ({selectedTableMeta.rows}×{selectedTableMeta.cols})</p>
                           <div className="grid grid-cols-2 gap-1.5 mb-2">
                             <button onClick={() => modifyTable(1, 0)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">+ 행 추가</button>
                             <button onClick={() => modifyTable(-1, 0)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">− 행 삭제</button>

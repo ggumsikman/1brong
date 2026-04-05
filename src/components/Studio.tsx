@@ -173,8 +173,8 @@ export default function Studio() {
   const [tblCols, setTblCols] = useState('3')
 
   // 표 편집 모드
-  const [editingTable, setEditingTable] = useState<{ id: string; rows: number; cols: number; theme: number } | null>(null)
-  const editingTableRef = useRef<{ id: string; rows: number; cols: number; theme: number } | null>(null)
+  const [editingTable, setEditingTable] = useState<{ id: string; rows: number; cols: number; theme: number; cellW?: number; cellH?: number; fontSize?: number } | null>(null)
+  const editingTableRef = useRef<{ id: string; rows: number; cols: number; theme: number; cellW?: number; cellH?: number; fontSize?: number } | null>(null)
 
   // 클립보드 (내부 복사/붙여넣기)
   const clipboardRef = useRef<fabric.FabricObject | null>(null)
@@ -489,7 +489,6 @@ export default function Studio() {
     const rows = target._tRows as number, cols = target._tCols as number, themeIdx = target._tTheme as number
     const group = target as fabric.Group
     const theme = TABLE_THEMES[themeIdx]
-    const cellW = 90, cellH = 38
     const scX = group.scaleX ?? 1, scY = group.scaleY ?? 1
     const tableId = `tbledit${Date.now()}`
 
@@ -498,10 +497,14 @@ export default function Studio() {
     const texts: string[][] = []
     for (let r = 0; r < rows; r++) { texts[r] = []; for (let c = 0; c < cols; c++) texts[r][c] = textboxes[r * cols + c]?.text ?? '' }
 
-    // Group 위치 → 셀 시작 좌표 계산
+    // Group의 실제 렌더 크기에서 셀 크기 역산
+    const groupW = (group.width ?? 1) * scX, groupH = (group.height ?? 1) * scY
+    const actualCW = groupW / cols, actualCH = groupH / rows
+
+    // Group 위치 → 셀 시작 좌표 (center origin 보정)
     const gLeft = group.left ?? 0, gTop = group.top ?? 0
-    const scaledCW = cellW * scX, scaledCH = cellH * scY
-    const startX = gLeft - (cols * scaledCW) / 2, startY = gTop - (rows * scaledCH) / 2
+    const startX = gLeft - groupW / 2, startY = gTop - groupH / 2
+    const fontSize = Math.round(13 * Math.min(actualCW / 90, actualCH / 38))
 
     isHistoryOp.current = true
     canvas.remove(group)
@@ -509,8 +512,8 @@ export default function Studio() {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         canvas.add(new fabric.Rect({
-          left: startX + c * scaledCW, top: startY + r * scaledCH,
-          width: scaledCW, height: scaledCH,
+          left: startX + c * actualCW, top: startY + r * actualCH,
+          width: actualCW, height: actualCH,
           fill: r === 0 ? theme.headerBg : (r % 2 === 0 ? theme.cellBgAlt : theme.cellBg),
           stroke: theme.border, strokeWidth: 0.8,
           selectable: false, evented: false,
@@ -521,9 +524,9 @@ export default function Studio() {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         canvas.add(new fabric.Textbox(texts[r][c], {
-          left: startX + c * scaledCW + 3, top: startY + r * scaledCH + 2,
-          width: scaledCW - 6,
-          fontSize: Math.round(13 * Math.min(scX, scY)),
+          left: startX + c * actualCW + 3, top: startY + r * actualCH + 2,
+          width: actualCW - 6,
+          fontSize,
           fontFamily: FONTS[0].value,
           fontWeight: r === 0 ? 'bold' : 'normal',
           textAlign: 'center', fill: theme.text,
@@ -536,7 +539,7 @@ export default function Studio() {
     isHistoryOp.current = false
     saveHistory()
 
-    const meta = { id: tableId, rows, cols, theme: themeIdx }
+    const meta = { id: tableId, rows, cols, theme: themeIdx, cellW: actualCW, cellH: actualCH, fontSize }
     editingTableRef.current = meta
     setEditingTable(meta)
     canvas.renderAll()
@@ -548,12 +551,13 @@ export default function Studio() {
     if (canvas && selected && (selected as any)._tRows) enterTableEditFromCanvas(canvas, selected)
   }
 
-  // ── 표 편집 완료 (개별 오브젝트 → Group) ──────────────────
+  // ── 표 편집 완료 (개별 오브젝트 → Group, 크기 보존) ─────────
   const exitTableEdit = () => {
     const canvas = canvasRef.current; if (!canvas || !editingTableRef.current) return
-    const { id, rows, cols, theme: themeIdx } = editingTableRef.current
+    const { id, rows, cols, theme: themeIdx, cellW: aCW, cellH: aCH, fontSize: aFS } = editingTableRef.current as { id: string; rows: number; cols: number; theme: number; cellW?: number; cellH?: number; fontSize?: number }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gn = (o: any): string => o?.name ?? ''
+    const theme = TABLE_THEMES[themeIdx]
     // 텍스트 읽기
     const texts: string[][] = []
     for (let r = 0; r < rows; r++) {
@@ -563,17 +567,47 @@ export default function Studio() {
         texts[r][c] = obj?.text ?? ''
       }
     }
-    // 위치 계산
+    // 위치 계산 (bg Rect 들의 바운딩 박스)
     const bgs = canvas.getObjects().filter(o => gn(o).startsWith(`${id}-bg-`))
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-    bgs.forEach(o => { minX = Math.min(minX, o.left ?? 0); minY = Math.min(minY, o.top ?? 0); maxX = Math.max(maxX, (o.left ?? 0) + (o.width ?? 0) * (o.scaleX ?? 1)); maxY = Math.max(maxY, (o.top ?? 0) + (o.height ?? 0) * (o.scaleY ?? 1)) })
+    bgs.forEach(o => { minX = Math.min(minX, o.left ?? 0); minY = Math.min(minY, o.top ?? 0); maxX = Math.max(maxX, (o.left ?? 0) + (o.width ?? 0)); maxY = Math.max(maxY, (o.top ?? 0) + (o.height ?? 0)) })
     const center = { left: (minX + maxX) / 2, top: (minY + maxY) / 2 }
+    // 실제 셀 크기 (편집 모드에서 사용한 값, 없으면 기본값)
+    const useCW = aCW ?? 90, useCH = aCH ?? 38, useFS = aFS ?? 13
     // 제거
     isHistoryOp.current = true
     canvas.getObjects().filter(o => gn(o).startsWith(id)).forEach(o => canvas.remove(o))
+    // Group 재생성 (실제 크기로)
+    const objs: fabric.FabricObject[] = []
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        objs.push(new fabric.Rect({
+          left: c * useCW, top: r * useCH, width: useCW, height: useCH,
+          fill: r === 0 ? theme.headerBg : (r % 2 === 0 ? theme.cellBgAlt : theme.cellBg),
+          stroke: theme.border, strokeWidth: 0.8,
+        }))
+      }
+    }
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        objs.push(new fabric.Textbox(texts[r][c], {
+          left: c * useCW + 3, top: r * useCH + 2,
+          width: useCW - 6, fontSize: useFS,
+          fontFamily: FONTS[0].value,
+          fontWeight: r === 0 ? 'bold' : 'normal',
+          textAlign: 'center', fill: theme.text, splitByGrapheme: true,
+        }))
+      }
+    }
+    const group = new fabric.Group(objs, {
+      left: center.left, top: center.top, originX: 'center', originY: 'center',
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ga = group as any; ga._tRows = rows; ga._tCols = cols; ga._tTheme = themeIdx
+    canvas.add(group)
     isHistoryOp.current = false
-    // 재생성
-    createTable(rows, cols, themeIdx, texts, center)
+    saveHistory()
+    canvas.setActiveObject(group); canvas.renderAll()
     editingTableRef.current = null
     setEditingTable(null)
   }

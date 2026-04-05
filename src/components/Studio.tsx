@@ -254,28 +254,51 @@ export default function Studio() {
 
     canvas.on('selection:cleared', () => setSelected(null))
 
-    // ── 표 셀 드래그 시 전체 동기 이동 ────────────────────
+    // ── 표 셀 드래그 시 배경 Rect 동기 이동 ─────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getName = (o: any): string => o?.name ?? ''
-    canvas.on('object:moving', (opt) => {
-      const obj = opt.target; if (!getName(obj).includes('-tx-')) return
+    const getTableIds = (obj: fabric.FabricObject): Set<string> => {
+      const ids = new Set<string>()
+      // 단일 오브젝트
       const n = getName(obj)
-      const tableId = n.substring(0, n.indexOf('-tx-'))
+      if (n.includes('-tx-')) ids.add(n.substring(0, n.indexOf('-tx-')))
+      // ActiveSelection (다중 선택)
+      if (obj.type === 'activeselection') {
+        for (const child of (obj as fabric.ActiveSelection).getObjects()) {
+          const cn = getName(child)
+          if (cn.includes('-tx-')) ids.add(cn.substring(0, cn.indexOf('-tx-')))
+        }
+      }
+      return ids
+    }
+    canvas.on('object:moving', (opt) => {
+      const obj = opt.target; if (!obj) return
+      const tableIds = getTableIds(obj)
+      if (tableIds.size === 0) return
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const a = obj as any
       if (!a._tblInit) {
-        const all = canvas.getObjects().filter(o => o !== obj && getName(o).startsWith(tableId))
-        a._tblSibs = all.map(s => ({ o: s, l: s.left ?? 0, t: s.top ?? 0 }))
-        a._tblSL = obj!.left ?? 0; a._tblST = obj!.top ?? 0; a._tblInit = true
+        // 이동에 포함되지 않은 배경 Rect들 수집
+        const movingSet = new Set<fabric.FabricObject>()
+        movingSet.add(obj)
+        if (obj.type === 'activeselection') (obj as fabric.ActiveSelection).getObjects().forEach(c => movingSet.add(c))
+        const bgs: { o: fabric.FabricObject; l: number; t: number }[] = []
+        for (const tid of tableIds) {
+          canvas.getObjects().filter(o => !movingSet.has(o) && getName(o).startsWith(tid)).forEach(o => {
+            bgs.push({ o, l: o.left ?? 0, t: o.top ?? 0 })
+          })
+        }
+        a._tblBgs = bgs
+        a._tblSL = obj.left ?? 0; a._tblST = obj.top ?? 0; a._tblInit = true
       }
-      const dx = (obj!.left ?? 0) - a._tblSL, dy = (obj!.top ?? 0) - a._tblST
-      for (const s of a._tblSibs ?? []) { s.o.set({ left: s.l + dx, top: s.t + dy }); s.o.setCoords() }
+      const dx = (obj.left ?? 0) - a._tblSL, dy = (obj.top ?? 0) - a._tblST
+      for (const s of a._tblBgs ?? []) { s.o.set({ left: s.l + dx, top: s.t + dy }); s.o.setCoords() }
     })
 
     canvas.on('object:modified', () => {
       const obj = canvas.getActiveObject()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (obj && (obj as any)._tblInit) { delete (obj as any)._tblSibs; delete (obj as any)._tblSL; delete (obj as any)._tblST; delete (obj as any)._tblInit }
+      if (obj && (obj as any)._tblInit) { delete (obj as any)._tblBgs; delete (obj as any)._tblSL; delete (obj as any)._tblST; delete (obj as any)._tblInit }
       if (obj) syncSelected(obj)
       saveHistory()
     })

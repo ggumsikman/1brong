@@ -463,19 +463,26 @@ export default function Studio() {
         }))
       }
     }
-    // 셀 텍스트 (IText — 클릭 선택 / 더블클릭 편집)
+    // 셀 텍스트 (Textbox — 셀 영역 전체가 클릭 가능)
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const txt = existingTexts?.[r]?.[c] ?? ''
-        canvas.add(new fabric.IText(txt, {
-          left: startX + c * cellW + cellW / 2,
-          top: startY + r * cellH + cellH / 2,
-          originX: 'center', originY: 'center',
+        const tb = new fabric.Textbox(txt, {
+          left: startX + c * cellW,
+          top: startY + r * cellH,
+          width: cellW,
+          height: cellH,
           fontSize: 14, fontFamily: FONTS[0].value,
           fontWeight: r === 0 ? 'bold' : 'normal',
           textAlign: 'center', fill: theme.text,
+          splitByGrapheme: true,
+          editable: true,
+          backgroundColor: 'transparent',
           name: `${tableId}-tx-${r}-${c}`,
-        }))
+        })
+        // 고정 높이 유지 — padding으로 세로 중앙 정렬 효과
+        tb.set({ padding: Math.max(0, (cellH - 14 * 1.2) / 2) } as never)
+        canvas.add(tb)
       }
     }
     isHistoryOp.current = false
@@ -504,7 +511,7 @@ export default function Studio() {
     for (let r = 0; r < meta.rows; r++) {
       texts[r] = []
       for (let cc = 0; cc < meta.cols; cc++) {
-        const obj = c.getObjects().find(o => gn(o) === `${tableId}-tx-${r}-${cc}`) as fabric.IText | undefined
+        const obj = c.getObjects().find(o => gn(o) === `${tableId}-tx-${r}-${cc}`) as fabric.Textbox | undefined
         texts[r][cc] = obj?.text ?? ''
       }
     }

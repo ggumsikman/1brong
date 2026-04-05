@@ -172,6 +172,10 @@ export default function Studio() {
   const [tblRows, setTblRows] = useState('3')
   const [tblCols, setTblCols] = useState('3')
 
+  // 표 편집 모드
+  const [editingTable, setEditingTable] = useState<{ id: string; rows: number; cols: number; theme: number } | null>(null)
+  const editingTableRef = useRef<{ id: string; rows: number; cols: number; theme: number } | null>(null)
+
   // 클립보드 (내부 복사/붙여넣기)
   const clipboardRef = useRef<fabric.FabricObject | null>(null)
 
@@ -269,6 +273,15 @@ export default function Studio() {
     canvas.on('selection:updated', () => {
       const obj = canvas.getActiveObject()
       syncSelected(obj ?? null)
+    })
+
+    // ── 표 더블클릭 → 편집 모드 진입 ────────────────────────
+    canvas.on('mouse:dblclick', (opt) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const target = opt.target as any
+      if (target?._tRows && !editingTableRef.current) {
+        enterTableEditFromCanvas(canvas, target)
+      }
     })
 
     // ── 격자 / 가이드라인 렌더 ────────────────────────────
@@ -470,6 +483,101 @@ export default function Studio() {
   }
 
   // ── 표 텍스트 읽기 ─────────────────────────────────────────
+  // ── 표 편집 모드 진입 (Group → 개별 오브젝트) ──────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const enterTableEditFromCanvas = (canvas: fabric.Canvas, target: any) => {
+    const rows = target._tRows as number, cols = target._tCols as number, themeIdx = target._tTheme as number
+    const group = target as fabric.Group
+    const theme = TABLE_THEMES[themeIdx]
+    const cellW = 90, cellH = 38
+    const scX = group.scaleX ?? 1, scY = group.scaleY ?? 1
+    const tableId = `tbledit${Date.now()}`
+
+    // 기존 텍스트 읽기
+    const textboxes = group.getObjects().filter(o => o.type === 'textbox') as fabric.Textbox[]
+    const texts: string[][] = []
+    for (let r = 0; r < rows; r++) { texts[r] = []; for (let c = 0; c < cols; c++) texts[r][c] = textboxes[r * cols + c]?.text ?? '' }
+
+    // Group 위치 → 셀 시작 좌표 계산
+    const gLeft = group.left ?? 0, gTop = group.top ?? 0
+    const scaledCW = cellW * scX, scaledCH = cellH * scY
+    const startX = gLeft - (cols * scaledCW) / 2, startY = gTop - (rows * scaledCH) / 2
+
+    isHistoryOp.current = true
+    canvas.remove(group)
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        canvas.add(new fabric.Rect({
+          left: startX + c * scaledCW, top: startY + r * scaledCH,
+          width: scaledCW, height: scaledCH,
+          fill: r === 0 ? theme.headerBg : (r % 2 === 0 ? theme.cellBgAlt : theme.cellBg),
+          stroke: theme.border, strokeWidth: 0.8,
+          selectable: false, evented: false,
+          name: `${tableId}-bg-${r}-${c}`,
+        } as never))
+      }
+    }
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        canvas.add(new fabric.Textbox(texts[r][c], {
+          left: startX + c * scaledCW + 3, top: startY + r * scaledCH + 2,
+          width: scaledCW - 6,
+          fontSize: Math.round(13 * Math.min(scX, scY)),
+          fontFamily: FONTS[0].value,
+          fontWeight: r === 0 ? 'bold' : 'normal',
+          textAlign: 'center', fill: theme.text,
+          splitByGrapheme: true, editable: true,
+          name: `${tableId}-tx-${r}-${c}`,
+          lockScalingX: true, lockScalingY: true, lockRotation: true, hasControls: false,
+        } as never))
+      }
+    }
+    isHistoryOp.current = false
+    saveHistory()
+
+    const meta = { id: tableId, rows, cols, theme: themeIdx }
+    editingTableRef.current = meta
+    setEditingTable(meta)
+    canvas.renderAll()
+  }
+
+  const enterTableEdit = () => {
+    const canvas = canvasRef.current
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (canvas && selected && (selected as any)._tRows) enterTableEditFromCanvas(canvas, selected)
+  }
+
+  // ── 표 편집 완료 (개별 오브젝트 → Group) ──────────────────
+  const exitTableEdit = () => {
+    const canvas = canvasRef.current; if (!canvas || !editingTableRef.current) return
+    const { id, rows, cols, theme: themeIdx } = editingTableRef.current
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gn = (o: any): string => o?.name ?? ''
+    // 텍스트 읽기
+    const texts: string[][] = []
+    for (let r = 0; r < rows; r++) {
+      texts[r] = []
+      for (let c = 0; c < cols; c++) {
+        const obj = canvas.getObjects().find(o => gn(o) === `${id}-tx-${r}-${c}`) as fabric.Textbox | undefined
+        texts[r][c] = obj?.text ?? ''
+      }
+    }
+    // 위치 계산
+    const bgs = canvas.getObjects().filter(o => gn(o).startsWith(`${id}-bg-`))
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    bgs.forEach(o => { minX = Math.min(minX, o.left ?? 0); minY = Math.min(minY, o.top ?? 0); maxX = Math.max(maxX, (o.left ?? 0) + (o.width ?? 0) * (o.scaleX ?? 1)); maxY = Math.max(maxY, (o.top ?? 0) + (o.height ?? 0) * (o.scaleY ?? 1)) })
+    const center = { left: (minX + maxX) / 2, top: (minY + maxY) / 2 }
+    // 제거
+    isHistoryOp.current = true
+    canvas.getObjects().filter(o => gn(o).startsWith(id)).forEach(o => canvas.remove(o))
+    isHistoryOp.current = false
+    // 재생성
+    createTable(rows, cols, themeIdx, texts, center)
+    editingTableRef.current = null
+    setEditingTable(null)
+  }
+
   const getTableTexts = (): string[][] => {
     if (!selected) return []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1018,35 +1126,36 @@ export default function Studio() {
                         표 만들기
                       </button>
                       {/* 선택된 표 편집 */}
-                      {selectedTableMeta && (() => {
-                        const tt = getTableTexts()
-                        return (
-                          <div className="border-t border-gray-100 pt-3">
-                            <p className="text-xs font-bold text-pink-400 mb-2">표 편집 ({selectedTableMeta.rows}×{selectedTableMeta.cols})</p>
-                            {/* 셀 텍스트 입력 */}
-                            <div className="space-y-1 mb-3 max-h-40 overflow-y-auto">
-                              {tt.map((row, r) => (
-                                <div key={r} className="flex gap-0.5">
-                                  {row.map((cell, c) => (
-                                    <input key={`${r}-${c}`} defaultValue={cell}
-                                      placeholder={r === 0 ? `항목${c+1}` : ''}
-                                      onChange={e => updateTableCell(r, c, e.target.value)}
-                                      className="flex-1 min-w-0 border rounded px-1 py-1 text-center focus:outline-none focus:ring-1 focus:ring-pink-300"
-                                      style={{ fontSize: 10, background: r === 0 ? TABLE_THEMES[selectedTableMeta.theme].headerBg + '40' : '#fafafa' }} />
-                                  ))}
-                                </div>
-                              ))}
-                            </div>
-                            {/* 행/열 추가·삭제 */}
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <button onClick={() => modifyTable(1, 0)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">+ 행 추가</button>
-                              <button onClick={() => modifyTable(-1, 0)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">− 행 삭제</button>
-                              <button onClick={() => modifyTable(0, 1)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">+ 열 추가</button>
-                              <button onClick={() => modifyTable(0, -1)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">− 열 삭제</button>
-                            </div>
+                      {/* 표 Group 선택 시 */}
+                      {selectedTableMeta && !editingTable && (
+                        <div className="border-t border-gray-100 pt-3">
+                          <p className="text-xs font-bold text-pink-400 mb-2">표 ({selectedTableMeta.rows}×{selectedTableMeta.cols})</p>
+                          <button onClick={enterTableEdit}
+                            className="w-full py-2.5 rounded-xl text-xs font-bold text-white mb-3 transition"
+                            style={{ background: 'linear-gradient(135deg,#FF6B9D,#C77DFF)' }}>
+                            ✏️ 셀 텍스트 편집
+                          </button>
+                          <p className="text-gray-400 mb-3" style={{ fontSize: 10 }}>더블클릭으로도 편집 모드 진입 가능</p>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <button onClick={() => modifyTable(1, 0)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">+ 행 추가</button>
+                            <button onClick={() => modifyTable(-1, 0)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">− 행 삭제</button>
+                            <button onClick={() => modifyTable(0, 1)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">+ 열 추가</button>
+                            <button onClick={() => modifyTable(0, -1)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">− 열 삭제</button>
                           </div>
-                        )
-                      })()}
+                        </div>
+                      )}
+                      {/* 표 편집 모드 */}
+                      {editingTable && (
+                        <div className="border-t border-gray-100 pt-3">
+                          <p className="text-xs font-bold text-green-500 mb-2">✏️ 편집 중 ({editingTable.rows}×{editingTable.cols})</p>
+                          <p className="text-gray-400 mb-3" style={{ fontSize: 10 }}>셀을 더블클릭해서 텍스트를 입력하세요</p>
+                          <button onClick={exitTableEdit}
+                            className="w-full py-2.5 rounded-xl text-xs font-bold text-white transition"
+                            style={{ background: 'linear-gradient(135deg,#00B894,#00CEC9)' }}>
+                            ✅ 편집 완료
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

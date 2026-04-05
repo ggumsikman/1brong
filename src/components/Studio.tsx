@@ -502,8 +502,11 @@ export default function Studio() {
           editable: true,
           backgroundColor: 'transparent',
           name: `${tableId}-tx-${r}-${c}`,
+          // 크기 조절 잠금 (이동 + 텍스트 편집만 허용)
+          lockScalingX: true, lockScalingY: true,
+          lockRotation: true,
+          hasControls: false,
         })
-        // 고정 높이 유지 — padding으로 세로 중앙 정렬 효과
         tb.set({ padding: Math.max(0, (cellH - 14 * 1.2) / 2) } as never)
         canvas.add(tb)
       }

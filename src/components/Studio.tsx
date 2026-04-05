@@ -83,6 +83,15 @@ const SHAPES = [
   { label: '오각별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,35 95,35 71,57 80,90 50,70 20,90 29,57 5,35 37,35" fill="#A29BFE"/></svg>` },
 ]
 
+// ── 표 테마 (귀여운 스타일) ────────────────────────────────
+const TABLE_THEMES = [
+  { id: 'cherry', label: '🌸 벚꽃', headerBg: '#FFB3C6', cellBg: '#FFF5F8', cellBgAlt: '#FFF0F5', border: '#F9C5D1', text: '#8B4060', radius: 10 },
+  { id: 'mint', label: '🌿 새싹', headerBg: '#A8E6CF', cellBg: '#F5FFF8', cellBgAlt: '#EEFFF4', border: '#B0DDCA', text: '#2D6A4F', radius: 10 },
+  { id: 'lavender', label: '💜 라벤더', headerBg: '#D4B3E8', cellBg: '#FAF5FF', cellBgAlt: '#F3ECFF', border: '#D0BFE0', text: '#5A3075', radius: 10 },
+  { id: 'sky', label: '☁️ 하늘', headerBg: '#A8D4E6', cellBg: '#F5FAFF', cellBgAlt: '#ECF5FF', border: '#B0D0E0', text: '#2D5A75', radius: 10 },
+  { id: 'sun', label: '🌻 해바라기', headerBg: '#FFE4A0', cellBg: '#FFFDF5', cellBgAlt: '#FFF8E8', border: '#F0D890', text: '#6B5A20', radius: 10 },
+]
+
 // ── 배경 팔레트 (일비롱 스타일) ───────────────────────────
 const BG_SOLIDS = [
   '#FFFFFF', '#FFF8F0', '#FFE8D6', '#FFDDE1', '#FFE8F5',
@@ -158,8 +167,10 @@ export default function Studio() {
   // 요소 탭
   const [elemTab, setElemTab] = useState<'ilbirong'|'shape'|'table'>('ilbirong')
 
-  // 표: 격자 선택 hover
-  const [tableHover, setTableHover] = useState<{r:number;c:number}|null>(null)
+  // 표 설정
+  const [tableThemeIdx, setTableThemeIdx] = useState(0)
+  const [tblRows, setTblRows] = useState('3')
+  const [tblCols, setTblCols] = useState('3')
 
   // 클립보드 (내부 복사/붙여넣기)
   const clipboardRef = useRef<fabric.FabricObject | null>(null)
@@ -406,32 +417,79 @@ export default function Studio() {
     canvas?.renderAll()
   }
 
-  // ── 표 추가 ──────────────────────────────────────────────
-  const addTable = (rows: number, cols: number, headerColor = '#FFE0EF', lineColor = '#bbb') => {
+  // ── 표 생성 (귀여운 테마 + interactive 셀) ─────────────────
+  const createTable = (rows: number, cols: number, themeIdx: number, existingTexts?: string[][], pos?: {left:number;top:number}) => {
     const canvas = canvasRef.current; if (!canvas) return
-    const cellW = 90, cellH = 36
+    const theme = TABLE_THEMES[themeIdx] ?? TABLE_THEMES[0]
+    const cellW = 90, cellH = 38
     const tableW = cols * cellW, tableH = rows * cellH
     const objs: fabric.FabricObject[] = []
-    // 헤더 행 배경
-    objs.push(new fabric.Rect({ left: 0, top: 0, width: tableW, height: cellH, fill: headerColor, strokeWidth: 0 }))
-    // 나머지 행 배경
-    for (let r = 1; r < rows; r++) {
-      objs.push(new fabric.Rect({ left: 0, top: r * cellH, width: tableW, height: cellH, fill: '#ffffff', strokeWidth: 0 }))
+
+    // 셀 배경 (Rect)
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const isHeader = r === 0
+        objs.push(new fabric.Rect({
+          left: c * cellW, top: r * cellH,
+          width: cellW, height: cellH,
+          fill: isHeader ? theme.headerBg : (r % 2 === 0 ? theme.cellBgAlt : theme.cellBg),
+          stroke: theme.border, strokeWidth: 0.8,
+          selectable: false, evented: false,
+        }))
+      }
     }
-    // 가로선
-    for (let r = 0; r <= rows; r++) {
-      objs.push(new fabric.Line([0, r * cellH, tableW, r * cellH], { stroke: lineColor, strokeWidth: 1 }))
-    }
-    // 세로선
-    for (let c = 0; c <= cols; c++) {
-      objs.push(new fabric.Line([c * cellW, 0, c * cellW, tableH], { stroke: lineColor, strokeWidth: 1 }))
+    // 둥근 외곽 테두리
+    objs.push(new fabric.Rect({
+      left: -1.5, top: -1.5, width: tableW + 3, height: tableH + 3,
+      rx: theme.radius, ry: theme.radius,
+      fill: 'transparent', stroke: theme.border, strokeWidth: 2.5,
+      selectable: false, evented: false,
+    }))
+    // 셀 텍스트 (IText — 더블클릭 편집)
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const txt = existingTexts?.[r]?.[c] ?? ''
+        objs.push(new fabric.IText(txt, {
+          left: c * cellW + cellW / 2, top: r * cellH + cellH / 2,
+          fontSize: 14, fontFamily: FONTS[0].value,
+          fontWeight: r === 0 ? 'bold' : 'normal',
+          textAlign: 'center', fill: theme.text,
+          originX: 'center', originY: 'center',
+        }))
+      }
     }
     const group = new fabric.Group(objs, {
-      left: canvasPreset.w / 2, top: canvasPreset.h / 2,
+      left: pos?.left ?? canvasPreset.w / 2,
+      top: pos?.top ?? canvasPreset.h / 2,
       originX: 'center', originY: 'center',
+      subTargetCheck: true, interactive: true,
     })
+    // 메타데이터
+    const g = group as fabric.Group & { _tRows: number; _tCols: number; _tTheme: number }
+    g._tRows = rows; g._tCols = cols; g._tTheme = themeIdx
     canvas.add(group); canvas.setActiveObject(group); canvas.renderAll()
   }
+
+  // ── 표 행/열 추가·삭제 ──────────────────────────────────────
+  const modifyTable = (dRow: number, dCol: number) => {
+    const c = canvasRef.current; if (!c) return
+    const obj = c.getActiveObject() as fabric.Group & { _tRows?: number; _tCols?: number; _tTheme?: number }
+    if (!obj || obj._tRows == null) return
+    const oldR = obj._tRows, oldC = obj._tCols!, themeIdx = obj._tTheme!
+    const newR = Math.max(1, oldR + dRow), newC = Math.max(1, oldC + dCol)
+    // 기존 텍스트 추출
+    const itexts = obj.getObjects().filter(o => o.type === 'i-text') as fabric.IText[]
+    const texts: string[][] = []
+    for (let r = 0; r < oldR; r++) { texts[r] = []; for (let cc = 0; cc < oldC; cc++) texts[r][cc] = itexts[r * oldC + cc]?.text ?? '' }
+    const pos = { left: obj.left ?? canvasPreset.w / 2, top: obj.top ?? canvasPreset.h / 2 }
+    c.remove(obj); setSelected(null)
+    createTable(newR, newC, themeIdx, texts, pos)
+  }
+
+  // 선택된 표 감지
+  const selectedTable = selected && (selected as unknown as { _tRows?: number })._tRows != null
+    ? (selected as fabric.Group & { _tRows: number; _tCols: number; _tTheme: number })
+    : null
 
   // ── 스티커(SVG) 추가 ──────────────────────────────────────
   const addSticker = async (svgStr: string) => {
@@ -914,50 +972,55 @@ export default function Studio() {
                   )}
                   {elemTab === 'table' && (
                     <div>
-                      {/* 격자 선택기 */}
-                      <p className="text-xs text-gray-400 mb-2 font-medium">크기 선택 (행 × 열)</p>
-                      <div className="inline-grid gap-1 mb-1" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}
-                        onMouseLeave={() => setTableHover(null)}>
-                        {Array.from({ length: 6 }, (_, r) =>
-                          Array.from({ length: 6 }, (_, c) => (
-                            <div key={`${r}-${c}`}
-                              onMouseEnter={() => setTableHover({ r: r + 1, c: c + 1 })}
-                              onClick={() => { addTable(r + 1, c + 1); setTableHover(null) }}
-                              className="w-7 h-7 rounded border cursor-pointer transition"
-                              style={{
-                                borderColor: tableHover && r < tableHover.r && c < tableHover.c ? '#FF6B9D' : '#e5e7eb',
-                                background: tableHover && r < tableHover.r && c < tableHover.c ? '#FFE0EF' : '#f9fafb',
-                              }} />
-                          ))
-                        )}
+                      {/* 테마 선택 */}
+                      <p className="text-xs text-gray-400 mb-2 font-medium">테마</p>
+                      <div className="flex gap-1.5 mb-4">
+                        {TABLE_THEMES.map((t, i) => (
+                          <button key={t.id} onClick={() => setTableThemeIdx(i)}
+                            className="flex-1 py-2 rounded-lg text-center transition border-2"
+                            style={{
+                              background: t.headerBg,
+                              borderColor: tableThemeIdx === i ? t.text : 'transparent',
+                              opacity: tableThemeIdx === i ? 1 : 0.6,
+                            }}>
+                            <span style={{ fontSize: 16 }}>{t.label.split(' ')[0]}</span>
+                          </button>
+                        ))}
                       </div>
-                      <p className="text-xs text-pink-400 h-5 mb-4 font-medium">
-                        {tableHover ? `${tableHover.r} × ${tableHover.c}` : ''}
-                      </p>
-                      {/* 프리셋 */}
-                      <p className="text-xs text-gray-400 mb-2 font-medium">템플릿</p>
-                      <div className="space-y-2">
-                        <button onClick={() => addTable(6, 6, '#FFE0EF', '#dda')}
-                          className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:border-pink-200 hover:bg-pink-50 transition">
-                          <span className="text-xs font-bold text-gray-600">📅 시간표</span>
-                          <span className="text-gray-400 block" style={{ fontSize: 10 }}>6행 × 6열 · 핑크 헤더</span>
-                        </button>
-                        <button onClick={() => addTable(6, 6, '#E8F5E9', '#aaa')}
-                          className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:border-green-200 hover:bg-green-50 transition">
-                          <span className="text-xs font-bold text-gray-600">⭐ 칭찬 스티커판</span>
-                          <span className="text-gray-400 block" style={{ fontSize: 10 }}>6행 × 6열 · 민트 헤더</span>
-                        </button>
-                        <button onClick={() => addTable(3, 4, '#E3F2FD', '#99b')}
-                          className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition">
-                          <span className="text-xs font-bold text-gray-600">🏷 이름표</span>
-                          <span className="text-gray-400 block" style={{ fontSize: 10 }}>3행 × 4열 · 하늘색 헤더</span>
-                        </button>
-                        <button onClick={() => addTable(5, 3, '#F3E5F5', '#b9b')}
-                          className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition">
-                          <span className="text-xs font-bold text-gray-600">📋 출석부</span>
-                          <span className="text-gray-400 block" style={{ fontSize: 10 }}>5행 × 3열 · 보라 헤더</span>
-                        </button>
+                      {/* 미리보기 */}
+                      <div className="rounded-xl overflow-hidden mb-4 border" style={{ borderColor: TABLE_THEMES[tableThemeIdx].border }}>
+                        <div className="h-6" style={{ background: TABLE_THEMES[tableThemeIdx].headerBg }} />
+                        <div className="h-5" style={{ background: TABLE_THEMES[tableThemeIdx].cellBg }} />
+                        <div className="h-5" style={{ background: TABLE_THEMES[tableThemeIdx].cellBgAlt }} />
+                        <div className="h-5" style={{ background: TABLE_THEMES[tableThemeIdx].cellBg }} />
                       </div>
+                      {/* 크기 입력 */}
+                      <p className="text-xs text-gray-400 mb-2 font-medium">크기 (행 × 열)</p>
+                      <div className="flex gap-2 items-center mb-3">
+                        <input type="number" min={1} max={20} value={tblRows} onChange={e => setTblRows(e.target.value)}
+                          className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                        <span className="text-gray-400 text-xs font-bold">×</span>
+                        <input type="number" min={1} max={20} value={tblCols} onChange={e => setTblCols(e.target.value)}
+                          className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                      </div>
+                      <button onClick={() => createTable(Math.max(1, +tblRows || 3), Math.max(1, +tblCols || 3), tableThemeIdx)}
+                        className="w-full py-2.5 rounded-xl text-xs font-bold text-white transition mb-4"
+                        style={{ background: 'linear-gradient(135deg,#FF6B9D,#C77DFF)' }}>
+                        표 만들기
+                      </button>
+                      {/* 선택된 표 편집 */}
+                      {selectedTable && (
+                        <div className="border-t border-gray-100 pt-3">
+                          <p className="text-xs font-bold text-pink-400 mb-2">표 편집 ({selectedTable._tRows}×{selectedTable._tCols})</p>
+                          <div className="grid grid-cols-2 gap-1.5 mb-2">
+                            <button onClick={() => modifyTable(1, 0)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">+ 행 추가</button>
+                            <button onClick={() => modifyTable(-1, 0)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">− 행 삭제</button>
+                            <button onClick={() => modifyTable(0, 1)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">+ 열 추가</button>
+                            <button onClick={() => modifyTable(0, -1)} className="border border-gray-200 text-gray-600 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">− 열 삭제</button>
+                          </div>
+                          <p className="text-gray-400" style={{ fontSize: 10 }}>더블클릭으로 셀 텍스트 편집</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

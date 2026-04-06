@@ -1024,8 +1024,41 @@ export default function Studio() {
                     </button>
                   ))}
                 </div>
+                {/* 글자 간격 + 줄 간격 */}
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400 w-12">글자 간격</span>
+                    <input type="range" min={-200} max={800} defaultValue={0}
+                      onChange={e => updateText({ charSpacing: +e.target.value } as never)}
+                      className="flex-1 accent-pink-500" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400 w-12">줄 간격</span>
+                    <input type="range" min={50} max={300} defaultValue={120}
+                      onChange={e => updateText({ lineHeight: +e.target.value / 100 })}
+                      className="flex-1 accent-pink-500" />
+                  </div>
+                </div>
+                {/* 가로/세로 쓰기 */}
+                <div className="mt-3">
+                  <label className="text-[10px] text-gray-400 block mb-1">쓰기 방향</label>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => {
+                        const t = canvasRef.current?.getActiveObject() as fabric.Textbox; if (!t) return
+                        t.set({ width: canvasPreset.w * 0.75, splitByGrapheme: false })
+                        canvasRef.current?.renderAll()
+                      }}
+                      className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">T→ 가로</button>
+                    <button onClick={() => {
+                        const t = canvasRef.current?.getActiveObject() as fabric.Textbox; if (!t) return
+                        t.set({ width: (t.fontSize ?? 40) * 1.3, splitByGrapheme: true })
+                        canvasRef.current?.renderAll()
+                      }}
+                      className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">T↓ 세로</button>
+                  </div>
+                </div>
                 {/* 레이어 + 삭제 */}
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 mt-3">
                   <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition">↓ 뒤로</button>
                   <button onClick={bringFwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition">↑ 앞으로</button>
                   <button onClick={deleteSelected} className="flex-1 border border-red-200 text-red-400 text-xs py-1.5 rounded-lg hover:bg-red-50 transition font-medium">🗑 삭제</button>

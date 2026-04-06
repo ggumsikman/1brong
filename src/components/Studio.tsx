@@ -77,11 +77,28 @@ const STICKER_BASE = '/1brong/stickers'
 
 // ── SVG 도형 ──────────────────────────────────────────────
 const SHAPES = [
-  { label: '사각형', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="5" y="5" width="90" height="90" rx="12" fill="#FF6B6B"/></svg>` },
-  { label: '원', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#74B9FF"/></svg>` },
-  { label: '다이아', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="#FFD166"/></svg>` },
-  { label: '오각별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,35 95,35 71,57 80,90 50,70 20,90 29,57 5,35 37,35" fill="#A29BFE"/></svg>` },
+  // 기본 도형
+  { label: '사각형', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="5" y="5" width="90" height="90" fill="{{COLOR}}"/></svg>` },
+  { label: '둥근사각', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="5" y="5" width="90" height="90" rx="16" fill="{{COLOR}}"/></svg>` },
+  { label: '원', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="{{COLOR}}"/></svg>` },
+  { label: '삼각형', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 95,95 5,95" fill="{{COLOR}}"/></svg>` },
+  { label: '다이아', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 95,50 50,95 5,50" fill="{{COLOR}}"/></svg>` },
+  { label: '오각형', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 97,36 79,91 21,91 3,36" fill="{{COLOR}}"/></svg>` },
+  { label: '육각형', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,3 93,27 93,73 50,97 7,73 7,27" fill="{{COLOR}}"/></svg>` },
+  // 별
+  { label: '오각별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 63,35 95,35 71,57 80,90 50,70 20,90 29,57 5,35 37,35" fill="{{COLOR}}"/></svg>` },
+  { label: '육각별', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,5 62,30 90,15 75,42 100,50 75,58 90,85 62,70 50,95 38,70 10,85 25,58 0,50 25,42 10,15 38,30" fill="{{COLOR}}"/></svg>` },
+  // 화살표
+  { label: '→', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70"><polygon points="0,20 60,20 60,0 100,35 60,70 60,50 0,50" fill="{{COLOR}}"/></svg>` },
+  { label: '←', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70"><polygon points="100,20 40,20 40,0 0,35 40,70 40,50 100,50" fill="{{COLOR}}"/></svg>` },
+  { label: '↑', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 100"><polygon points="20,100 20,40 0,40 35,0 70,40 50,40 50,100" fill="{{COLOR}}"/></svg>` },
+  { label: '↓', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 100"><polygon points="20,0 20,60 0,60 35,100 70,60 50,60 50,0" fill="{{COLOR}}"/></svg>` },
+  // 특수
+  { label: '하트', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 88 C25 65 2 45 2 28 2 14 12 2 26 2 36 2 46 10 50 18 54 10 64 2 74 2 88 2 98 14 98 28 98 45 75 65 50 88Z" fill="{{COLOR}}"/></svg>` },
+  { label: '십자', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M35,0 H65 V35 H100 V65 H65 V100 H35 V65 H0 V35 H35Z" fill="{{COLOR}}"/></svg>` },
+  { label: '말풍선', svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 90"><rect x="0" y="0" width="100" height="70" rx="14" fill="{{COLOR}}"/><polygon points="20,70 35,90 45,70" fill="{{COLOR}}"/></svg>` },
 ]
+const SHAPE_DEFAULT_COLOR = '#FF6B6B'
 
 // ── 표 테마 (귀여운 스타일) ────────────────────────────────
 const TABLE_THEMES = [
@@ -179,6 +196,7 @@ export default function Studio() {
 
   // 요소 탭
   const [elemTab, setElemTab] = useState<'ilbirong'|'shape'|'table'>('ilbirong')
+  const [shapeColor, setShapeColor] = useState('#FF6B6B')
 
   // 표 설정
   const [tableThemeIdx, setTableThemeIdx] = useState(0)
@@ -515,11 +533,12 @@ export default function Studio() {
     : null
 
   // ── 스티커(SVG) 추가 ──────────────────────────────────────
-  const addSticker = async (svgStr: string) => {
+  const addSticker = async (svgStr: string, color?: string) => {
     const canvas = canvasRef.current; if (!canvas) return
+    const finalSvg = svgStr.replace(/\{\{COLOR\}\}/g, color || SHAPE_DEFAULT_COLOR)
     // loadSVGFromString으로 파싱 → Group으로 묶어 캔버스 중앙에 배치
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { objects } = await (fabric as any).loadSVGFromString(svgStr)
+    const { objects } = await (fabric as any).loadSVGFromString(finalSvg)
     const filtered = (objects as fabric.FabricObject[]).filter(Boolean)
     if (filtered.length === 0) return
     const group = new fabric.Group(filtered, {
@@ -839,6 +858,17 @@ export default function Studio() {
     setActivePanel(p => p === id ? null : id)
   }
 
+  // ── 선택된 도형 색상 변경 ────────────────────────────────
+  const changeSelectedColor = (color: string) => {
+    const c = canvasRef.current; if (!c || !selected) return
+    if (selected.type === 'group') {
+      (selected as fabric.Group).getObjects().forEach(o => o.set({ fill: color }))
+    } else {
+      selected.set({ fill: color })
+    }
+    c.renderAll()
+  }
+
   const isText = selected?.type === 'textbox'
 
   return (
@@ -1027,15 +1057,38 @@ export default function Studio() {
                     </div>
                   )}
                   {elemTab === 'shape' && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {SHAPES.map(s => (
-                        <button key={s.label} onClick={() => addSticker(s.svg)}
-                          className="aspect-square rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-purple-50">
-                          <div className="w-8 h-8 flex items-center justify-center"
-                            dangerouslySetInnerHTML={{ __html: s.svg }} />
-                          <span className="text-gray-400" style={{ fontSize: 9 }}>{s.label}</span>
-                        </button>
-                      ))}
+                    <div>
+                      {/* 색상 선택 */}
+                      <p className="text-xs text-gray-400 mb-1.5 font-medium">도형 색상</p>
+                      <div className="flex gap-1.5 mb-3 flex-wrap">
+                        {['#FF6B6B','#FF6B9D','#FFB3C6','#FFD166','#FFB347','#74B9FF','#A29BFE','#6C5CE7','#00B894','#2ECC71','#333333','#FFFFFF'].map(c => (
+                          <button key={c} onClick={() => setShapeColor(c)}
+                            className="w-7 h-7 rounded-lg border-2 transition-all"
+                            style={{ backgroundColor: c, borderColor: shapeColor === c ? '#333' : c === '#FFFFFF' ? '#ddd' : 'transparent' }} />
+                        ))}
+                        <input type="color" value={shapeColor} onChange={e => setShapeColor(e.target.value)}
+                          className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer p-0" title="자유 색상" />
+                      </div>
+                      {/* 선택된 도형 색상 변경 */}
+                      {selected && !isText && (
+                        <div className="mb-3 flex items-center gap-2">
+                          <span className="text-xs text-gray-400">선택된 도형 색상:</span>
+                          <input type="color" defaultValue="#FF6B6B"
+                            onChange={e => changeSelectedColor(e.target.value)}
+                            className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer p-0" />
+                        </div>
+                      )}
+                      {/* 도형 그리드 */}
+                      <div className="grid grid-cols-4 gap-2">
+                        {SHAPES.map(s => (
+                          <button key={s.label} onClick={() => addSticker(s.svg, shapeColor)}
+                            className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-pink-50">
+                            <div className="w-8 h-8 flex items-center justify-center"
+                              dangerouslySetInnerHTML={{ __html: s.svg.replace(/\{\{COLOR\}\}/g, shapeColor) }} />
+                            <span className="text-gray-400" style={{ fontSize: 8 }}>{s.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {elemTab === 'table' && (

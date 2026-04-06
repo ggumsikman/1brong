@@ -179,6 +179,8 @@ export default function Studio() {
   const [selSize, setSelSize] = useState(60)
   const [selColor, setSelColor] = useState('#333333')
   const [selBold, setSelBold] = useState(false)
+  const [selItalic, setSelItalic] = useState(false)
+  const [selUnderline, setSelUnderline] = useState(false)
   const [selAlign, setSelAlign] = useState<'left'|'center'|'right'>('center')
 
   // 배경 탭
@@ -421,6 +423,8 @@ export default function Studio() {
       setSelSize(t.fontSize ?? 60)
       setSelColor((t.fill as string) ?? '#333333')
       setSelBold(t.fontWeight === 'bold')
+      setSelItalic(t.fontStyle === 'italic')
+      setSelUnderline(!!t.underline)
       setSelAlign((t.textAlign as 'left'|'center'|'right') ?? 'center')
     }
   }
@@ -1009,6 +1013,10 @@ export default function Studio() {
                   </div>
                   <button onClick={() => { const nb = !selBold; setSelBold(nb); updateText({ fontWeight: nb ? 'bold' : 'normal' }) }}
                     className={`px-2.5 py-1.5 rounded-lg text-sm font-black border transition mt-4 ${selBold ? 'bg-gray-800 text-white' : 'border-gray-200 text-gray-500'}`}>B</button>
+                  <button onClick={() => { const ni = !selItalic; setSelItalic(ni); updateText({ fontStyle: ni ? 'italic' : 'normal' }) }}
+                    className={`px-2.5 py-1.5 rounded-lg text-sm border transition mt-4 italic ${selItalic ? 'bg-gray-800 text-white' : 'border-gray-200 text-gray-500'}`}>I</button>
+                  <button onClick={() => { const nu = !selUnderline; setSelUnderline(nu); updateText({ underline: nu }) }}
+                    className={`px-2.5 py-1.5 rounded-lg text-sm border transition mt-4 underline ${selUnderline ? 'bg-gray-800 text-white' : 'border-gray-200 text-gray-500'}`}>U</button>
                   {(['left','center','right'] as const).map(a => (
                     <button key={a} onClick={() => { setSelAlign(a); updateText({ textAlign: a }) }}
                       className={`px-2 py-1.5 rounded-lg text-xs border transition mt-4 ${selAlign === a ? 'bg-purple-500 text-white' : 'border-gray-200 text-gray-500'}`}>

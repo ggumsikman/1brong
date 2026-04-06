@@ -63,7 +63,7 @@ const ILBIRONG_STICKERS = [
   '새싹','스마일','스마일2','슾',
   '언덕','언덕1','언덕2',
   '여자입학1','여학생','연보라 나비','연필',
-  '오티여아합성','요','유치원','유치원버스','은계','을',
+  '오티여아합성','요','유치원','유치원버스','을',
   '음표','음표2','음표3','입',
   '입학남아','입학남자 합성','입학남자아이','입학모자','입학여어','입학여자아이',
   '잎','잎1','잎2','잎3','자','전구',
@@ -199,6 +199,7 @@ export default function Studio() {
   // 요소 탭
   const [elemTab, setElemTab] = useState<'ilbirong'|'shape'|'table'>('ilbirong')
   const [shapeColor, setShapeColor] = useState('#FF6B6B')
+  const [stickerSearch, setStickerSearch] = useState('')
   const [imgBrightness, setImgBrightness] = useState(0)
   const [imgContrast, setImgContrast] = useState(0)
   const [imgSaturation, setImgSaturation] = useState(0)
@@ -785,13 +786,18 @@ export default function Studio() {
 
   // ── 폰트 업로드 ──────────────────────────────────────────
   const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
-    const fontName = file.name.replace(/\.[^.]+$/, '')
-    const url = URL.createObjectURL(file)
-    const font = new FontFace(fontName, `url(${url})`)
-    await font.load()
-    document.fonts.add(font)
-    setCustomFonts(prev => [...prev, { label: fontName, value: fontName }])
+    const files = e.target.files; if (!files) return
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const fontName = file.name.replace(/\.[^.]+$/, '')
+      // 중복 체크
+      if (customFonts.some(f => f.value === fontName) || FONTS.some(f => f.value === fontName)) continue
+      const url = URL.createObjectURL(file)
+      const font = new FontFace(fontName, `url(${url})`)
+      await font.load()
+      document.fonts.add(font)
+      setCustomFonts(prev => [...prev, { label: fontName, value: fontName }])
+    }
     e.target.value = ''
   }
 
@@ -1057,6 +1063,43 @@ export default function Studio() {
                       className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-pink-50 font-medium">T↓ 세로</button>
                   </div>
                 </div>
+                {/* 텍스트 효과 */}
+                <div className="mt-3">
+                  <label className="text-[10px] text-gray-400 block mb-1">효과</label>
+                  <div className="grid grid-cols-4 gap-1.5 mb-2">
+                    <button onClick={() => updateText({ stroke: '#333', strokeWidth: 2 })}
+                      className="text-xs py-1.5 rounded-lg border border-gray-200 hover:bg-pink-50 font-medium text-gray-600">테두리</button>
+                    <button onClick={() => updateText({ shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.4)', blur: 8, offsetX: 3, offsetY: 3 }) as never })}
+                      className="text-xs py-1.5 rounded-lg border border-gray-200 hover:bg-pink-50 font-medium text-gray-600">그림자</button>
+                    <button onClick={() => updateText({ backgroundColor: '#FFE0EF' })}
+                      className="text-xs py-1.5 rounded-lg border border-gray-200 hover:bg-pink-50 font-medium text-gray-600">배경</button>
+                    <button onClick={() => updateText({ shadow: new fabric.Shadow({ color: '#C77DFF', blur: 15, offsetX: 0, offsetY: 0 }) as never, stroke: '#C77DFF', strokeWidth: 1 })}
+                      className="text-xs py-1.5 rounded-lg border border-gray-200 hover:bg-pink-50 font-medium text-gray-600">네온</button>
+                  </div>
+                  {/* 효과 세부 조절 */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-400 w-12">외곽선</span>
+                      <input type="range" min={0} max={8} defaultValue={0} step={0.5}
+                        onChange={e => updateText({ strokeWidth: +e.target.value })}
+                        className="flex-1 accent-pink-500" />
+                      <input type="color" defaultValue="#333333"
+                        onChange={e => updateText({ stroke: e.target.value })}
+                        className="w-6 h-6 rounded border border-gray-200 cursor-pointer p-0" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-400 w-12">배경색</span>
+                      <input type="color" defaultValue="#FFE0EF"
+                        onChange={e => updateText({ backgroundColor: e.target.value })}
+                        className="w-6 h-6 rounded border border-gray-200 cursor-pointer p-0" />
+                      <button onClick={() => updateText({ backgroundColor: '' })}
+                        className="text-[10px] text-gray-400 hover:text-red-400">제거</button>
+                    </div>
+                  </div>
+                  {/* 효과 초기화 */}
+                  <button onClick={() => updateText({ stroke: '', strokeWidth: 0, shadow: null as never, backgroundColor: '' })}
+                    className="w-full text-xs text-gray-400 py-1 mt-1 hover:text-pink-500">효과 초기화</button>
+                </div>
                 {/* 레이어 + 삭제 */}
                 <div className="flex gap-1.5 mt-3">
                   <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition">↓ 뒤로</button>
@@ -1175,7 +1218,7 @@ export default function Studio() {
                     <span className="text-lg">🔤</span>
                     <span className="font-medium">폰트 파일 추가</span>
                     <span className="text-gray-400" style={{ fontSize: 10 }}>.ttf / .otf / .woff / .woff2</span>
-                    <input type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={handleFontUpload} />
+                    <input type="file" accept=".ttf,.otf,.woff,.woff2" multiple className="hidden" onChange={handleFontUpload} />
                   </label>
                   {customFonts.length > 0 && (
                     <div className="mt-2 space-y-1">
@@ -1209,8 +1252,12 @@ export default function Studio() {
                 {/* 콘텐츠 (스크롤) */}
                 <div className="flex-1 overflow-y-auto p-3">
                   {elemTab === 'ilbirong' && (
+                    <div>
+                    <input value={stickerSearch} onChange={e => setStickerSearch(e.target.value)}
+                      placeholder="🔍 손그림 검색..."
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs mb-2 focus:outline-none focus:ring-2 focus:ring-pink-300" />
                     <div className="grid grid-cols-3 gap-2">
-                      {ILBIRONG_STICKERS.map(name => (
+                      {ILBIRONG_STICKERS.filter(n => !stickerSearch || n.includes(stickerSearch)).map(name => (
                         <button key={name} onClick={() => addIlbirong(name)}
                           className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-1.5 bg-gray-50 hover:bg-pink-50">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1219,6 +1266,7 @@ export default function Studio() {
                           <span className="text-gray-400 leading-tight text-center w-full truncate px-0.5" style={{ fontSize: 9 }}>{name}</span>
                         </button>
                       ))}
+                    </div>
                     </div>
                   )}
                   {elemTab === 'shape' && (

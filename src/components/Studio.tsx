@@ -414,6 +414,9 @@ export default function Studio() {
           const r = new fabric.Rect({ left: canvasPreset.w/2, top: canvasPreset.h/2, originX:'center', originY:'center', width:150, height:150, fill:'#FF6B6B', rx:8, ry:8 })
           canvas.add(r); canvas.setActiveObject(r); canvas.renderAll()
         }
+        if (e.key === 'l' || e.key === 'L') {
+          e.preventDefault(); addLine()
+        }
         if (e.key === 'c' || e.key === 'C') {
           // C는 텍스트 입력 중이 아닐 때만
           if (!obj) {
@@ -990,6 +993,19 @@ export default function Studio() {
     c.renderAll()
   }
 
+  // ── 선 추가 ────────────────────────────────────────────
+  const addLine = (color?: string) => {
+    const canvas = canvasRef.current; if (!canvas) return
+    const line = new fabric.Line([0, 0, 200, 0], {
+      left: canvasPreset.w / 2 - 100,
+      top: canvasPreset.h / 2,
+      stroke: color || '#333333',
+      strokeWidth: 3,
+      strokeLineCap: 'round',
+    })
+    canvas.add(line); canvas.setActiveObject(line); canvas.renderAll()
+  }
+
   // ── 잠금/해제 ───────────────────────────────────────────
   const toggleLock = () => {
     const c = canvasRef.current; const o = c?.getActiveObject(); if (!c || !o) return
@@ -1285,6 +1301,21 @@ export default function Studio() {
                     </div>
                   </>
                 )}
+                {/* 선 두께 (선 타입만) */}
+                {selected.type === 'line' && (
+                  <>
+                    <label className="text-xs text-gray-500 block mb-1">선 색상 / 두께</label>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input type="color" defaultValue={(selected.stroke as string) || '#333'}
+                        onChange={e => { selected.set({ stroke: e.target.value }); canvasRef.current?.renderAll() }}
+                        className="w-7 h-7 rounded border border-gray-200 cursor-pointer p-0" />
+                      <input type="range" min={1} max={20} defaultValue={selected.strokeWidth ?? 3}
+                        onChange={e => { selected.set({ strokeWidth: +e.target.value }); canvasRef.current?.renderAll() }}
+                        className="flex-1 accent-purple-500" />
+                      <span className="text-[10px] text-gray-400 w-6 text-right">{selected.strokeWidth ?? 3}px</span>
+                    </div>
+                  </>
+                )}
                 {/* 이미지 보정 (이미지만) */}
                 {isImage && (
                   <>
@@ -1442,6 +1473,42 @@ export default function Studio() {
                             className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer p-0" />
                         </div>
                       )}
+                      {/* 선 */}
+                      <p className="text-xs text-gray-400 mb-1.5 mt-3 font-medium">선</p>
+                      <div className="grid grid-cols-4 gap-2 mb-3">
+                        <button onClick={() => addLine(shapeColor)}
+                          className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-pink-50">
+                          <div className="w-8 flex items-center justify-center"><svg width="32" height="4"><line x1="0" y1="2" x2="32" y2="2" stroke={shapeColor} strokeWidth="3" strokeLinecap="round"/></svg></div>
+                          <span className="text-gray-400" style={{ fontSize: 8 }}>직선</span>
+                        </button>
+                        <button onClick={() => {
+                            const canvas = canvasRef.current; if (!canvas) return
+                            const line = new fabric.Line([0, 0, 200, 0], { left: canvasPreset.w/2-100, top: canvasPreset.h/2, stroke: shapeColor, strokeWidth: 3, strokeDashArray: [10, 5], strokeLineCap: 'round' })
+                            canvas.add(line); canvas.setActiveObject(line); canvas.renderAll()
+                          }}
+                          className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-pink-50">
+                          <div className="w-8 flex items-center justify-center"><svg width="32" height="4"><line x1="0" y1="2" x2="32" y2="2" stroke={shapeColor} strokeWidth="3" strokeDasharray="4 3" strokeLinecap="round"/></svg></div>
+                          <span className="text-gray-400" style={{ fontSize: 8 }}>점선</span>
+                        </button>
+                        <button onClick={() => {
+                            const canvas = canvasRef.current; if (!canvas) return
+                            const line = new fabric.Line([0, 0, 0, 200], { left: canvasPreset.w/2, top: canvasPreset.h/2-100, stroke: shapeColor, strokeWidth: 3, strokeLineCap: 'round' })
+                            canvas.add(line); canvas.setActiveObject(line); canvas.renderAll()
+                          }}
+                          className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-pink-50">
+                          <div className="h-8 flex items-center justify-center"><svg width="4" height="32"><line x1="2" y1="0" x2="2" y2="32" stroke={shapeColor} strokeWidth="3" strokeLinecap="round"/></svg></div>
+                          <span className="text-gray-400" style={{ fontSize: 8 }}>세로선</span>
+                        </button>
+                        <button onClick={() => {
+                            const canvas = canvasRef.current; if (!canvas) return
+                            const line = new fabric.Line([0, 0, 150, 150], { left: canvasPreset.w/2-75, top: canvasPreset.h/2-75, stroke: shapeColor, strokeWidth: 3, strokeLineCap: 'round' })
+                            canvas.add(line); canvas.setActiveObject(line); canvas.renderAll()
+                          }}
+                          className="aspect-square rounded-xl border border-gray-100 hover:border-pink-300 hover:shadow-sm transition flex flex-col items-center justify-center gap-1 p-2 bg-gray-50 hover:bg-pink-50">
+                          <div className="w-8 h-8 flex items-center justify-center"><svg width="28" height="28"><line x1="0" y1="28" x2="28" y2="0" stroke={shapeColor} strokeWidth="3" strokeLinecap="round"/></svg></div>
+                          <span className="text-gray-400" style={{ fontSize: 8 }}>대각선</span>
+                        </button>
+                      </div>
                       {/* 도형 그리드 */}
                       <div className="grid grid-cols-4 gap-2">
                         {SHAPES.map(s => (

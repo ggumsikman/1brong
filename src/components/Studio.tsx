@@ -988,6 +988,35 @@ export default function Studio() {
               </div>
             )}
 
+            {/* 선택된 도형 편집 패널 (최상단) */}
+            {selected && !isText && selected.type !== 'image' && (
+              <div className="p-4 border-b-2 border-purple-100 shrink-0" style={{ background: '#F5F0FF' }}>
+                <p className="text-xs font-bold text-purple-500 mb-3 uppercase tracking-wide">도형 편집</p>
+                {/* 색상 */}
+                <label className="text-xs text-gray-500 block mb-1">색상</label>
+                <div className="flex gap-1.5 mb-2 flex-wrap">
+                  {['#FF6B6B','#FF6B9D','#FFB3C6','#FFD166','#FFB347','#74B9FF','#A29BFE','#6C5CE7','#00B894','#2ECC71','#333333','#FFFFFF'].map(c => (
+                    <button key={c} onClick={() => changeSelectedColor(c)}
+                      className="w-7 h-7 rounded-lg border-2 transition-all hover:scale-110"
+                      style={{ backgroundColor: c, borderColor: c === '#FFFFFF' ? '#ddd' : 'transparent' }} />
+                  ))}
+                  <input type="color" onChange={e => changeSelectedColor(e.target.value)}
+                    className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer p-0" title="자유 색상" />
+                </div>
+                {/* 투명도 */}
+                <label className="text-xs text-gray-500 block mb-1">투명도</label>
+                <input type="range" min={0} max={100} defaultValue={100}
+                  onChange={e => { if (selected && canvasRef.current) { selected.set({ opacity: +e.target.value / 100 }); canvasRef.current.renderAll() } }}
+                  className="w-full accent-purple-500 mb-2" />
+                {/* 레이어 + 삭제 */}
+                <div className="flex gap-1.5">
+                  <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition">↓ 뒤로</button>
+                  <button onClick={bringFwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition">↑ 앞으로</button>
+                  <button onClick={deleteSelected} className="flex-1 border border-red-200 text-red-400 text-xs py-1.5 rounded-lg hover:bg-red-50 transition font-medium">🗑 삭제</button>
+                </div>
+              </div>
+            )}
+
             {/* ── 텍스트 패널 ── */}
             {activePanel === '텍스트' && (
               <div className="p-4 overflow-y-auto flex-1">

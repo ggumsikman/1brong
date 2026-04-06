@@ -846,6 +846,26 @@ export default function Studio() {
   const sendBwd = () => { const c = canvasRef.current; const o = c?.getActiveObject(); if (c && o) { c.sendObjectBackwards(o); c.renderAll() } }
 
   // ── 폰트 업로드 ──────────────────────────────────────────
+  // ── 서버 폰트 로드 (앱 시작 시) ──────────────────────────
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('fonts').select('*').order('created_at')
+      if (!data) return
+      for (const f of data) {
+        if (FONTS.some(x => x.value === f.font_name)) continue
+        try {
+          const font = new FontFace(f.font_name, `url(${f.font_url})`)
+          await font.load()
+          document.fonts.add(font)
+          setCustomFonts(prev => {
+            if (prev.some(x => x.value === f.font_name)) return prev
+            return [...prev, { label: f.font_name, value: f.font_name }]
+          })
+        } catch { /* 로드 실패 무시 */ }
+      }
+    })()
+  }, [])
+
   const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files; if (!files) return
     for (let i = 0; i < files.length; i++) {
@@ -853,8 +873,16 @@ export default function Studio() {
       const fontName = file.name.replace(/\.[^.]+$/, '')
       // 중복 체크
       if (customFonts.some(f => f.value === fontName) || FONTS.some(f => f.value === fontName)) continue
-      const url = URL.createObjectURL(file)
-      const font = new FontFace(fontName, `url(${url})`)
+      // Supabase Storage 업로드
+      const path = `${fontName}_${Date.now()}.${file.name.split('.').pop()}`
+      const { error: uploadErr } = await supabase.storage.from('fonts').upload(path, file, { upsert: true })
+      if (uploadErr) { console.error('폰트 업로드 실패:', uploadErr); continue }
+      const { data: urlData } = supabase.storage.from('fonts').getPublicUrl(path)
+      const fontUrl = urlData.publicUrl
+      // DB 저장
+      await supabase.from('fonts').insert({ font_name: fontName, font_url: fontUrl, file_name: file.name })
+      // 로컬 로드
+      const font = new FontFace(fontName, `url(${fontUrl})`)
       await font.load()
       document.fonts.add(font)
       setCustomFonts(prev => [...prev, { label: fontName, value: fontName }])

@@ -197,6 +197,10 @@ export default function Studio() {
   // 요소 탭
   const [elemTab, setElemTab] = useState<'ilbirong'|'shape'|'table'>('ilbirong')
   const [shapeColor, setShapeColor] = useState('#FF6B6B')
+  const [imgBrightness, setImgBrightness] = useState(0)
+  const [imgContrast, setImgContrast] = useState(0)
+  const [imgSaturation, setImgSaturation] = useState(0)
+  const [imgHue, setImgHue] = useState(0)
 
   // 표 설정
   const [tableThemeIdx, setTableThemeIdx] = useState(0)
@@ -858,6 +862,20 @@ export default function Studio() {
     setActivePanel(p => p === id ? null : id)
   }
 
+  // ── 이미지 필터 (밝기/대비/채도/색조) ──────────────────────
+  const applyImageFilters = (brightness: number, contrast: number, saturation: number, hue: number) => {
+    const c = canvasRef.current; if (!c || !selected || selected.type !== 'image') return
+    const img = selected as fabric.FabricImage
+    img.filters = [
+      new fabric.filters.Brightness({ brightness }),
+      new fabric.filters.Contrast({ contrast }),
+      new fabric.filters.Saturation({ saturation }),
+      new fabric.filters.HueRotation({ rotation: hue }),
+    ]
+    img.applyFilters()
+    c.renderAll()
+  }
+
   // ── 정렬 (캔버스 기준) ───────────────────────────────────
   const alignObj = (pos: string) => {
     const c = canvasRef.current; const o = c?.getActiveObject(); if (!c || !o) return
@@ -888,6 +906,7 @@ export default function Studio() {
   }
 
   const isText = selected?.type === 'textbox'
+  const isImage = selected?.type === 'image'
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#FFF8F0', fontFamily: 'Noto Sans KR, sans-serif' }}>
@@ -1035,6 +1054,44 @@ export default function Studio() {
                       <input type="color" onChange={e => changeSelectedColor(e.target.value)}
                         className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer p-0" title="자유 색상" />
                     </div>
+                  </>
+                )}
+                {/* 이미지 보정 (이미지만) */}
+                {isImage && (
+                  <>
+                    <label className="text-xs text-gray-500 block mb-1">이미지 보정</label>
+                    <div className="space-y-1.5 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 w-8">밝기</span>
+                        <input type="range" min={-100} max={100} value={imgBrightness}
+                          onChange={e => { const v = +e.target.value; setImgBrightness(v); applyImageFilters(v/100, imgContrast/100, imgSaturation/100, imgHue/360) }}
+                          className="flex-1 accent-purple-500" />
+                        <span className="text-[10px] text-gray-400 w-6 text-right">{imgBrightness}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 w-8">대비</span>
+                        <input type="range" min={-100} max={100} value={imgContrast}
+                          onChange={e => { const v = +e.target.value; setImgContrast(v); applyImageFilters(imgBrightness/100, v/100, imgSaturation/100, imgHue/360) }}
+                          className="flex-1 accent-purple-500" />
+                        <span className="text-[10px] text-gray-400 w-6 text-right">{imgContrast}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 w-8">채도</span>
+                        <input type="range" min={-100} max={100} value={imgSaturation}
+                          onChange={e => { const v = +e.target.value; setImgSaturation(v); applyImageFilters(imgBrightness/100, imgContrast/100, v/100, imgHue/360) }}
+                          className="flex-1 accent-purple-500" />
+                        <span className="text-[10px] text-gray-400 w-6 text-right">{imgSaturation}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 w-8">색조</span>
+                        <input type="range" min={-180} max={180} value={imgHue}
+                          onChange={e => { const v = +e.target.value; setImgHue(v); applyImageFilters(imgBrightness/100, imgContrast/100, imgSaturation/100, v/360) }}
+                          className="flex-1 accent-purple-500" />
+                        <span className="text-[10px] text-gray-400 w-6 text-right">{imgHue}</span>
+                      </div>
+                    </div>
+                    <button onClick={() => { setImgBrightness(0); setImgContrast(0); setImgSaturation(0); setImgHue(0); applyImageFilters(0,0,0,0) }}
+                      className="w-full text-xs text-gray-400 py-1 mb-2 hover:text-purple-500 transition">초기화</button>
                   </>
                 )}
                 {/* 투명도 */}

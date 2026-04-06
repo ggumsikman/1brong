@@ -388,6 +388,8 @@ export default function Studio() {
         if (e.altKey && e.key === ']') { e.preventDefault(); canvas.bringObjectToFront(obj); canvas.renderAll() }
         if (e.altKey && e.key === '[') { e.preventDefault(); canvas.sendObjectToBack(obj); canvas.renderAll() }
       }
+      // ── 잠금 (Alt+Shift+L) ──
+      if (e.altKey && e.shiftKey && (e.key === 'l' || e.key === 'L') && obj) { e.preventDefault(); toggleLock() }
       // ── 복제 (Ctrl+D) ──
       if (!isInput && ctrl && (e.key === 'd' || e.key === 'D') && obj) {
         e.preventDefault()
@@ -939,6 +941,20 @@ export default function Studio() {
     c.renderAll()
   }
 
+  // ── 잠금/해제 ───────────────────────────────────────────
+  const toggleLock = () => {
+    const c = canvasRef.current; const o = c?.getActiveObject(); if (!c || !o) return
+    const isLocked = !o.selectable || o.lockMovementX
+    o.set({
+      selectable: isLocked, evented: isLocked,
+      lockMovementX: !isLocked, lockMovementY: !isLocked,
+      lockScalingX: !isLocked, lockScalingY: !isLocked,
+      lockRotation: !isLocked, hasControls: isLocked,
+    })
+    if (!isLocked) c.discardActiveObject()
+    c.renderAll()
+  }
+
   // ── 정렬 (캔버스 기준) ───────────────────────────────────
   const alignObj = (pos: string) => {
     const c = canvasRef.current; const o = c?.getActiveObject(); if (!c || !o) return
@@ -1244,8 +1260,14 @@ export default function Studio() {
                   <button onClick={bringFwd} className="border border-gray-200 text-gray-500 text-[10px] py-1.5 rounded-lg hover:bg-gray-50">앞으로</button>
                   <button onClick={bringToFront} className="border border-gray-200 text-gray-500 text-[10px] py-1.5 rounded-lg hover:bg-gray-50">맨 앞</button>
                 </div>
-                {/* 삭제 */}
-                <button onClick={deleteSelected} className="w-full border border-red-200 text-red-400 text-xs py-1.5 rounded-lg hover:bg-red-50 transition font-medium">🗑 삭제</button>
+                {/* 잠금 + 삭제 */}
+                <div className="flex gap-1.5">
+                  <button onClick={toggleLock}
+                    className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition font-medium">
+                    {selected.lockMovementX ? '🔓 잠금해제' : '🔒 잠금'}
+                  </button>
+                  <button onClick={deleteSelected} className="flex-1 border border-red-200 text-red-400 text-xs py-1.5 rounded-lg hover:bg-red-50 transition font-medium">🗑 삭제</button>
+                </div>
               </div>
             )}
 

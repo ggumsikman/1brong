@@ -1261,23 +1261,27 @@ export default function Studio() {
                     </button>
                   ))}
                 </div>
-                {/* 직접 입력 */}
+                {/* 직접 입력 (cm) */}
                 <div className="border-t border-gray-100 mt-4 pt-4">
-                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">직접 입력 (px)</p>
+                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">직접 입력 (cm)</p>
                   <div className="flex gap-2 items-center">
-                    <input type="number" placeholder="가로" min={100} max={4000} value={customW}
+                    <input type="number" placeholder="가로 cm" min={1} max={100} step={0.1} value={customW}
                       onChange={e => setCustomW(e.target.value)}
                       className="flex-1 border border-gray-200 rounded-lg px-2.5 py-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-pink-300" />
                     <span className="text-gray-400 text-xs">×</span>
-                    <input type="number" placeholder="세로" min={100} max={4000} value={customH}
+                    <input type="number" placeholder="세로 cm" min={1} max={100} step={0.1} value={customH}
                       onChange={e => setCustomH(e.target.value)}
                       className="flex-1 border border-gray-200 rounded-lg px-2.5 py-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-pink-300" />
                   </div>
+                  <p className="text-gray-300 mt-1" style={{ fontSize: 9 }}>300DPI 인쇄 기준으로 변환됩니다</p>
                   <button
                     onClick={() => {
-                      const w = Math.max(100, Math.min(4000, parseInt(customW) || 600))
-                      const h = Math.max(100, Math.min(4000, parseInt(customH) || 600))
-                      setCanvasPreset({ label: `${w}×${h}`, icon: '📐', w, h })
+                      const cmToPx = (cm: number) => Math.round(cm * (300 / 2.54))
+                      const w = cmToPx(Math.max(1, Math.min(100, parseFloat(customW) || 10)))
+                      const h = cmToPx(Math.max(1, Math.min(100, parseFloat(customH) || 10)))
+                      const wCm = parseFloat(customW) || 10
+                      const hCm = parseFloat(customH) || 10
+                      setCanvasPreset({ label: `${wCm}×${hCm}cm`, icon: '📐', w, h })
                     }}
                     className="w-full mt-2 py-2 rounded-lg text-xs font-bold text-white transition"
                     style={{ background: 'linear-gradient(135deg,#FF6B9D,#C77DFF)' }}>

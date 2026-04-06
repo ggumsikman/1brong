@@ -232,6 +232,16 @@ export default function Gate({ onEnter }: { onEnter: () => void }) {
 
   useEffect(() => { setLoaded(true) }, [])
 
+  // 키보드 입력
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') pressKey(+e.key)
+      if (e.key === 'Backspace') backspace()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  })
+
   // 키 입력
   const pressKey = useCallback((digit: number) => {
     if (success) return

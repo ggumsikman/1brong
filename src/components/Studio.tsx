@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as fabric from 'fabric'
 import { removeBackground } from '@imgly/background-removal'
+import { supabase } from '@/lib/supabase'
 import { jsPDF } from 'jspdf'
 import pptxgen from 'pptxgenjs'
 
@@ -191,6 +192,8 @@ export default function Studio() {
 
   // 다운로드 드롭다운
   const [showDlMenu, setShowDlMenu] = useState(false)
+  const [templateLink, setTemplateLink] = useState<string | null>(null)
+  const [templateLoading, setTemplateLoading] = useState(false)
 
   // 커스텀 캔버스 크기
   const [customW, setCustomW] = useState('')
@@ -892,6 +895,52 @@ export default function Studio() {
   // 기존 download 함수 (인쇄용)
   const download = savePNG
 
+  // ── 템플릿 공유 ────────────────────────────────────────
+  const shareTemplate = async () => {
+    const c = canvasRef.current; if (!c) return
+    setTemplateLoading(true)
+    try {
+      c.discardActiveObject(); c.renderAll()
+      const json = JSON.stringify(c.toJSON())
+      const preview = c.toDataURL({ format: 'png', multiplier: 0.3 })
+      const { data, error } = await supabase.from('templates').insert({
+        canvas_json: json,
+        preview_url: preview,
+        canvas_width: canvasPreset.w,
+        canvas_height: canvasPreset.h,
+        canvas_label: canvasPreset.label,
+      }).select('id').single()
+      if (error) throw error
+      const link = `${window.location.origin}${window.location.pathname}?template=${data.id}`
+      setTemplateLink(link)
+    } catch (e) {
+      alert('템플릿 저장 실패: ' + (e instanceof Error ? e.message : String(e)))
+    }
+    setTemplateLoading(false)
+  }
+
+  const loadTemplate = useCallback(async (id: string) => {
+    const c = canvasRef.current; if (!c) return
+    const { data } = await supabase.from('templates').select('*').eq('id', id).single()
+    if (!data) return
+    setCanvasPreset({ label: data.canvas_label || '템플릿', icon: '📋', w: data.canvas_width, h: data.canvas_height })
+    setTimeout(async () => {
+      const canvas = canvasRef.current; if (!canvas) return
+      isHistoryOp.current = true
+      await canvas.loadFromJSON(JSON.parse(data.canvas_json))
+      canvas.renderAll()
+      isHistoryOp.current = false
+      saveHistory()
+    }, 500)
+  }, [canvasPreset, saveHistory])
+
+  // URL에서 템플릿 ID 확인
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tid = params.get('template')
+    if (tid && canvasRef.current) loadTemplate(tid)
+  }, [loadTemplate])
+
   // ── 프린트 ───────────────────────────────────────────────
   const print = () => {
     const c = canvasRef.current; if (!c) return
@@ -1037,8 +1086,35 @@ export default function Studio() {
               </div>
             )}
           </div>
+          <button onClick={shareTemplate} disabled={templateLoading}
+            className="bg-white/20 text-white font-bold text-sm px-4 py-2 rounded-xl hover:bg-white/30 transition flex items-center gap-1.5 disabled:opacity-50">
+            {templateLoading ? '⏳' : '🔗'} 공유
+          </button>
         </div>
       </header>
+
+      {/* ── 템플릿 링크 모달 ── */}
+      {templateLink && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setTemplateLink(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-black text-lg mb-1 text-gray-800">🔗 템플릿 링크</h3>
+            <p className="text-xs text-gray-400 mb-4">링크가 있는 모든 사람이 이 디자인을 사용할 수 있습니다.</p>
+            <div className="flex gap-2 mb-4">
+              <input value={templateLink} readOnly
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs bg-gray-50 text-gray-600" />
+              <button onClick={() => { navigator.clipboard.writeText(templateLink); alert('복사됨!') }}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-white shrink-0"
+                style={{ background: 'linear-gradient(135deg,#FF6B9D,#C77DFF)' }}>
+                복사
+              </button>
+            </div>
+            <button onClick={() => setTemplateLink(null)}
+              className="w-full py-2 rounded-lg text-xs font-bold border border-gray-200 text-gray-500 hover:bg-gray-50">
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* ══ 아이콘 사이드바 ══════════════════════════════ */}

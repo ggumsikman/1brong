@@ -347,9 +347,12 @@ export default function Studio() {
 
     // 키보드 Delete + Ctrl+Z/Y/C
     const onKey = (e: KeyboardEvent) => {
-      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement
+      const ctrl = e.ctrlKey || e.metaKey
+      const obj = canvas.getActiveObject()
+
+      // ── 삭제 ──
       if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
-        const obj = canvas.getActiveObject()
         if (obj) {
           if (obj.type === 'activeselection') {
             (obj as fabric.ActiveSelection).forEachObject(o => canvas.remove(o))
@@ -358,12 +361,62 @@ export default function Studio() {
           canvas.renderAll(); setSelected(null)
         }
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo() }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo() }
-      // 내부 복사
-      if (!isInput && (e.ctrlKey || e.metaKey) && e.key === 'c') {
-        const obj = canvas.getActiveObject()
+      // ── Undo/Redo ──
+      if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
+      if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z') || (e.shiftKey && e.key === 'Z'))) { e.preventDefault(); redo() }
+      // ── 복사 ──
+      if (!isInput && ctrl && e.key === 'c') {
         if (obj) obj.clone().then((cloned: fabric.FabricObject) => { clipboardRef.current = cloned })
+      }
+      // ── 모두 선택 (Ctrl+A) ──
+      if (!isInput && ctrl && e.key === 'a') {
+        e.preventDefault()
+        const sel = new fabric.ActiveSelection(canvas.getObjects(), { canvas })
+        canvas.setActiveObject(sel); canvas.renderAll()
+      }
+      // ── 텍스트 단축키 (선택된 텍스트가 있을 때) ──
+      if (ctrl && obj?.type === 'textbox') {
+        const t = obj as fabric.Textbox
+        if (e.key === 'b' || e.key === 'B') { e.preventDefault(); const nb = t.fontWeight !== 'bold'; t.set({ fontWeight: nb ? 'bold' : 'normal' }); setSelBold(nb); canvas.renderAll() }
+        if (e.key === 'i' || e.key === 'I') { e.preventDefault(); const ni = t.fontStyle !== 'italic'; t.set({ fontStyle: ni ? 'italic' : 'normal' }); setSelItalic(ni); canvas.renderAll() }
+        if (e.key === 'u' || e.key === 'U') { e.preventDefault(); const nu = !t.underline; t.set({ underline: nu }); setSelUnderline(nu); canvas.renderAll() }
+      }
+      // ── 레이어 (Ctrl+[ / Ctrl+]) ──
+      if (ctrl && obj) {
+        if (e.key === ']') { e.preventDefault(); canvas.bringObjectForward(obj); canvas.renderAll() }
+        if (e.key === '[') { e.preventDefault(); canvas.sendObjectBackwards(obj); canvas.renderAll() }
+        if (e.altKey && e.key === ']') { e.preventDefault(); canvas.bringObjectToFront(obj); canvas.renderAll() }
+        if (e.altKey && e.key === '[') { e.preventDefault(); canvas.sendObjectToBack(obj); canvas.renderAll() }
+      }
+      // ── 복제 (Ctrl+D) ──
+      if (!isInput && ctrl && (e.key === 'd' || e.key === 'D') && obj) {
+        e.preventDefault()
+        obj.clone().then((cloned: fabric.FabricObject) => {
+          cloned.set({ left: (cloned.left ?? 0) + 20, top: (cloned.top ?? 0) + 20 })
+          canvas.add(cloned); canvas.setActiveObject(cloned); canvas.renderAll()
+        })
+      }
+      // ── 요소 추가 단축키 (텍스트 입력 중이 아닐 때) ──
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!isInput && !ctrl && !(canvas.getActiveObject() as any)?.isEditing) {
+        if (e.key === 't' || e.key === 'T') {
+          e.preventDefault()
+          const t = new fabric.Textbox('텍스트', { left: canvasPreset.w/2, top: canvasPreset.h/2, originX:'center', originY:'center', fontSize:40, fontFamily: FONTS[0].value, textAlign:'center', width: canvasPreset.w*0.5 })
+          canvas.add(t); canvas.setActiveObject(t); canvas.renderAll()
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault()
+          const r = new fabric.Rect({ left: canvasPreset.w/2, top: canvasPreset.h/2, originX:'center', originY:'center', width:150, height:150, fill:'#FF6B6B', rx:8, ry:8 })
+          canvas.add(r); canvas.setActiveObject(r); canvas.renderAll()
+        }
+        if (e.key === 'c' || e.key === 'C') {
+          // C는 텍스트 입력 중이 아닐 때만
+          if (!obj) {
+            e.preventDefault()
+            const c = new fabric.Circle({ left: canvasPreset.w/2, top: canvasPreset.h/2, originX:'center', originY:'center', radius:75, fill:'#74B9FF' })
+            canvas.add(c); canvas.setActiveObject(c); canvas.renderAll()
+          }
+        }
       }
     }
     window.addEventListener('keydown', onKey)

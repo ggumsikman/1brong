@@ -858,6 +858,24 @@ export default function Studio() {
     setActivePanel(p => p === id ? null : id)
   }
 
+  // ── 정렬 (캔버스 기준) ───────────────────────────────────
+  const alignObj = (pos: string) => {
+    const c = canvasRef.current; const o = c?.getActiveObject(); if (!c || !o) return
+    const w = canvasPreset.w, h = canvasPreset.h
+    const ow = (o.width ?? 0) * (o.scaleX ?? 1), oh = (o.height ?? 0) * (o.scaleY ?? 1)
+    if (pos === 'left') o.set({ left: ow / 2, originX: 'center' })
+    if (pos === 'centerH') o.set({ left: w / 2, originX: 'center' })
+    if (pos === 'right') o.set({ left: w - ow / 2, originX: 'center' })
+    if (pos === 'top') o.set({ top: oh / 2, originY: 'center' })
+    if (pos === 'centerV') o.set({ top: h / 2, originY: 'center' })
+    if (pos === 'bottom') o.set({ top: h - oh / 2, originY: 'center' })
+    o.setCoords(); c.renderAll(); saveHistory()
+  }
+
+  // ── 레이어 (맨앞/맨뒤) ─────────────────────────────────
+  const bringToFront = () => { const c = canvasRef.current; const o = c?.getActiveObject(); if (c && o) { c.bringObjectToFront(o); c.renderAll() } }
+  const sendToBack = () => { const c = canvasRef.current; const o = c?.getActiveObject(); if (c && o) { c.sendObjectToBack(o); c.renderAll() } }
+
   // ── 선택된 도형 색상 변경 ────────────────────────────────
   const changeSelectedColor = (color: string) => {
     const c = canvasRef.current; if (!c || !selected) return
@@ -988,32 +1006,52 @@ export default function Studio() {
               </div>
             )}
 
-            {/* 선택된 도형 편집 패널 (최상단) */}
-            {selected && !isText && selected.type !== 'image' && (
-              <div className="p-4 border-b-2 border-purple-100 shrink-0" style={{ background: '#F5F0FF' }}>
-                <p className="text-xs font-bold text-purple-500 mb-3 uppercase tracking-wide">도형 편집</p>
-                {/* 색상 */}
-                <label className="text-xs text-gray-500 block mb-1">색상</label>
-                <div className="flex gap-1.5 mb-2 flex-wrap">
-                  {['#FF6B6B','#FF6B9D','#FFB3C6','#FFD166','#FFB347','#74B9FF','#A29BFE','#6C5CE7','#00B894','#2ECC71','#333333','#FFFFFF'].map(c => (
-                    <button key={c} onClick={() => changeSelectedColor(c)}
-                      className="w-7 h-7 rounded-lg border-2 transition-all hover:scale-110"
-                      style={{ backgroundColor: c, borderColor: c === '#FFFFFF' ? '#ddd' : 'transparent' }} />
-                  ))}
-                  <input type="color" onChange={e => changeSelectedColor(e.target.value)}
-                    className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer p-0" title="자유 색상" />
+            {/* 선택된 오브젝트 편집 패널 (최상단 — 도형+이미지 공용) */}
+            {selected && !isText && (
+              <div className="p-4 border-b-2 border-purple-100 shrink-0 overflow-y-auto" style={{ background: '#F5F0FF', maxHeight: '50vh' }}>
+                <p className="text-xs font-bold text-purple-500 mb-3 uppercase tracking-wide">
+                  {selected.type === 'image' ? '이미지 편집' : '도형 편집'}
+                </p>
+                {/* 정렬 */}
+                <label className="text-xs text-gray-500 block mb-1">정렬</label>
+                <div className="grid grid-cols-6 gap-1 mb-3">
+                  <button onClick={() => alignObj('left')} title="왼쪽 정렬" className="border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">◁</button>
+                  <button onClick={() => alignObj('centerH')} title="가로 가운데" className="border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">⫼</button>
+                  <button onClick={() => alignObj('right')} title="오른쪽 정렬" className="border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">▷</button>
+                  <button onClick={() => alignObj('top')} title="위쪽 정렬" className="border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">△</button>
+                  <button onClick={() => alignObj('centerV')} title="세로 가운데" className="border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">⊞</button>
+                  <button onClick={() => alignObj('bottom')} title="아래쪽 정렬" className="border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50">▽</button>
                 </div>
+                {/* 색상 (도형만) */}
+                {selected.type !== 'image' && (
+                  <>
+                    <label className="text-xs text-gray-500 block mb-1">색상</label>
+                    <div className="flex gap-1.5 mb-2 flex-wrap">
+                      {['#FF6B6B','#FF6B9D','#FFB3C6','#FFD166','#FFB347','#74B9FF','#A29BFE','#6C5CE7','#00B894','#2ECC71','#333333','#FFFFFF'].map(c => (
+                        <button key={c} onClick={() => changeSelectedColor(c)}
+                          className="w-7 h-7 rounded-lg border-2 transition-all hover:scale-110"
+                          style={{ backgroundColor: c, borderColor: c === '#FFFFFF' ? '#ddd' : 'transparent' }} />
+                      ))}
+                      <input type="color" onChange={e => changeSelectedColor(e.target.value)}
+                        className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer p-0" title="자유 색상" />
+                    </div>
+                  </>
+                )}
                 {/* 투명도 */}
                 <label className="text-xs text-gray-500 block mb-1">투명도</label>
-                <input type="range" min={0} max={100} defaultValue={100}
+                <input type="range" min={0} max={100} defaultValue={Math.round((selected.opacity ?? 1) * 100)}
                   onChange={e => { if (selected && canvasRef.current) { selected.set({ opacity: +e.target.value / 100 }); canvasRef.current.renderAll() } }}
-                  className="w-full accent-purple-500 mb-2" />
-                {/* 레이어 + 삭제 */}
-                <div className="flex gap-1.5">
-                  <button onClick={sendBwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition">↓ 뒤로</button>
-                  <button onClick={bringFwd} className="flex-1 border border-gray-200 text-gray-500 text-xs py-1.5 rounded-lg hover:bg-gray-50 transition">↑ 앞으로</button>
-                  <button onClick={deleteSelected} className="flex-1 border border-red-200 text-red-400 text-xs py-1.5 rounded-lg hover:bg-red-50 transition font-medium">🗑 삭제</button>
+                  className="w-full accent-purple-500 mb-3" />
+                {/* 레이어 */}
+                <label className="text-xs text-gray-500 block mb-1">레이어</label>
+                <div className="grid grid-cols-4 gap-1 mb-3">
+                  <button onClick={sendToBack} className="border border-gray-200 text-gray-500 text-[10px] py-1.5 rounded-lg hover:bg-gray-50">맨 뒤</button>
+                  <button onClick={sendBwd} className="border border-gray-200 text-gray-500 text-[10px] py-1.5 rounded-lg hover:bg-gray-50">뒤로</button>
+                  <button onClick={bringFwd} className="border border-gray-200 text-gray-500 text-[10px] py-1.5 rounded-lg hover:bg-gray-50">앞으로</button>
+                  <button onClick={bringToFront} className="border border-gray-200 text-gray-500 text-[10px] py-1.5 rounded-lg hover:bg-gray-50">맨 앞</button>
                 </div>
+                {/* 삭제 */}
+                <button onClick={deleteSelected} className="w-full border border-red-200 text-red-400 text-xs py-1.5 rounded-lg hover:bg-red-50 transition font-medium">🗑 삭제</button>
               </div>
             )}
 

@@ -74,7 +74,7 @@ const ILBIRONG_STICKERS = [
   '풍선 3','풍선2','풍선끈',
   '하','하느2','하얀꽃ㄹ','하트','학','학교','해 (2)','해','화분',
 ]
-const STICKER_BASE = '/1brong/stickers'
+const STICKER_BASE = '/stickers'
 
 // ── SVG 도형 ──────────────────────────────────────────────
 const SHAPES = [

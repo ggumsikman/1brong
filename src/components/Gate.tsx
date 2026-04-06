@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 
-const S = '/1brong/stickers'
+const S = '/stickers'
 const img = (n: string) => `${S}/${encodeURIComponent(n)}.png`
 const VALID_CODES = ['1004', '2026', '7777', '1234']
 const CODE_LEN = 4

@@ -1867,7 +1867,7 @@ export default function Studio() {
           © 2026 일비롱디자인 · All rights reserved.
           <span className="mx-2 text-gray-300">|</span>
           앱 제작 ·{' '}
-          <a href="https://ggumsikpan.github.io/ggumsikman" target="_blank" className="font-semibold no-underline" style={{ color: '#C77DFF' }}>꿈식판 꿈식맨</a>
+          <a href="https://ggumsikman.vercel.app/" target="_blank" className="font-semibold no-underline" style={{ color: '#C77DFF' }}>꿈식판 꿈식맨</a>
         </span>
       </footer>
     </div>
